@@ -1,0 +1,15 @@
+[package]
+name = "auth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+domain = { path = "../domain" }
+database = { path = "../database" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+argon2 = "0.5"
+jsonwebtoken = "9.3"
+uuid = { version = "1.8", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+sqlx = { workspace = true }

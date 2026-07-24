@@ -1,0 +1,38 @@
+[workspace]
+members = [
+    "app",
+    "ui",
+    "api",
+    "domain",
+    "database",
+    "config",
+    "shared",
+    "portfolio",
+    "books",
+    "markdown",
+    "articles",
+    "auth"
+, "analytics", "search", "assets"]
+resolver = "2"
+
+[workspace.dependencies]
+axum = { version = "0.7", features = ["macros"] }
+leptos = { version = "0.6" }
+leptos_axum = { version = "0.6" }
+leptos_meta = { version = "0.6" }
+leptos_router = { version = "0.6" }
+tokio = { version = "1.37", features = ["rt-multi-thread", "macros", "time"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["fs", "trace", "compression-full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+sqlx = { version = "0.7", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono"] }
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = "abort"

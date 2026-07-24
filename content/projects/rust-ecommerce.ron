@@ -1,0 +1,9 @@
+ProjectMetadata(
+    slug: "rust-ecommerce",
+    title: "Rust E-Commerce API",
+    description: "A high-performance e-commerce backend built with Rust, Axum, and PostgreSQL.",
+    tags: ["Rust", "Axum", "SQLx", "PostgreSQL"],
+    created_at: "2026-07-23T00:00:00Z",
+    github_url: Some("https://github.com/irshad/rust-ecommerce"),
+    live_url: None,
+)

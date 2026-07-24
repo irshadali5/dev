@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS page_views (
+    slug VARCHAR(255) PRIMARY KEY,
+    view_count BIGINT NOT NULL DEFAULT 1,
+    last_viewed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_page_views_count ON page_views (view_count DESC);

@@ -1,0 +1,8 @@
+(
+    slug: "rust-ownership",
+    title: "Understanding Rust Ownership",
+    description: "A deep dive into how Rust manages memory safely without a garbage collector.",
+    published: true,
+    tags: ["rust", "memory", "systems"],
+    created_at: "2026-07-23",
+)

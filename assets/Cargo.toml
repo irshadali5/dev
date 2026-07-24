@@ -1,0 +1,12 @@
+[package]
+name = "assets"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+image = "0.25"
+webp = "0.3.0"
+thiserror = "1.0"
+tracing = { workspace = true }
+walkdir = "2.4"
+tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }

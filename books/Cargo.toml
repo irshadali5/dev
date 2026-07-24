@@ -1,0 +1,10 @@
+[package]
+name = "books"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+domain = { path = "../domain" }
+database = { path = "../database" }
+thiserror = { workspace = true }
+sqlx = { workspace = true }
