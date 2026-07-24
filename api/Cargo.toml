@@ -4,6 +4,32 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = { workspace = true }
-tokio = { workspace = true }
-serde = { workspace = true }
+leptos = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+domain = { path = "../domain" }
+
+# Server-only dependencies
+axum = { workspace = true, optional = true }
+leptos_axum = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
+portfolio = { path = "../portfolio", optional = true }
+articles = { path = "../articles", optional = true }
+books = { path = "../books", optional = true }
+search = { path = "../search", optional = true }
+analytics = { path = "../analytics", optional = true }
+auth = { path = "../auth", optional = true }
+
+[features]
+hydrate = []
+ssr = [
+    "leptos/ssr",
+    "dep:axum",
+    "dep:leptos_axum",
+    "dep:sqlx",
+    "dep:portfolio",
+    "dep:articles",
+    "dep:books",
+    "dep:search",
+    "dep:analytics",
+    "dep:auth"
+]

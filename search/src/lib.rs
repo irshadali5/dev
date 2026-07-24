@@ -63,20 +63,26 @@ impl SearchService {
         })
     }
 
-    pub fn index_articles(&self, content_dir: &PathBuf) -> Result<(), SearchError> {
-        let mut index_writer: IndexWriter = self.index.writer(50_000_000)?;
-        let article_service = ArticleService::new(content_dir.clone());
+    pub async fn index_articles(&self, pool: sqlx::PgPool) -> Result<(), SearchError> {
+        let mut index_writer = self.index.writer(50_000_000)?;
         
-        if let Ok(articles) = article_service.get_all_articles() {
+        let article_service = ArticleService::new(pool);
+        
+        if let Ok(articles) = article_service.get_all_articles().await {
             for article in articles {
-                let tags_str = article.metadata.tags.join(" ");
-                index_writer.add_document(doc!(
-                    self.title_field => article.metadata.title,
-                    self.body_field => article.content_html, // indexing HTML for simplicity, though raw markdown is better
-                    self.tags_field => tags_str,
-                    self.slug_field => article.metadata.slug,
-                    self.type_field => "article"
-                ))?;
+                let mut doc = TantivyDocument::default();
+                
+                let title_field = self.schema.get_field("title").unwrap();
+                let body_field = self.schema.get_field("body").unwrap();
+                let slug_field = self.schema.get_field("slug").unwrap();
+                let type_field = self.schema.get_field("doc_type").unwrap();
+                
+                doc.add_text(title_field, &article.title);
+                doc.add_text(body_field, &article.body);
+                doc.add_text(slug_field, &article.slug);
+                doc.add_text(type_field, "article");
+                
+                index_writer.add_document(doc)?;
             }
         }
         

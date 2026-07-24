@@ -9,3 +9,6 @@ serde = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = { workspace = true }
 moka = { version = "0.12", features = ["sync"] }
+database = { path = "../database" }
+domain = { path = "../domain" }
+sqlx = { workspace = true }

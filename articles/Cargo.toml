@@ -4,10 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+database = { path = "../database" }
 domain = { path = "../domain" }
 markdown = { path = "../markdown" }
 serde = { workspace = true }
-thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = { workspace = true }
 tracing = { workspace = true }
 moka = { version = "0.12", features = ["sync"] }
 ron = "0.8"
+sqlx = { workspace = true }

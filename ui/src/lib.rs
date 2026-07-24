@@ -1,202 +1,8 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use leptos_router::*;
-use portfolio::models::Project;
-use domain::models::Book;
-use articles::models::Article;
-use serde::{Serialize, Deserialize};
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct UiSearchResult {
-    pub title: String,
-    pub slug: String,
-    pub doc_type: String,
-    pub snippet: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct UiPageView {
-    pub slug: String,
-    pub view_count: i64,
-}
-
-#[server(SearchContent, "/api")]
-pub async fn search_content(query: String) -> Result<Vec<UiSearchResult>, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        let search_service = expect_context::<search::SearchService>();
-        let results = search_service.search(&query).unwrap_or_default();
-        
-        // Map search::SearchResult to UiSearchResult
-        let ui_results = results.into_iter().map(|r| UiSearchResult {
-            title: r.title,
-            slug: r.slug,
-            doc_type: r.doc_type,
-            snippet: r.snippet,
-        }).collect();
-        
-        Ok(ui_results)
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(GetProjects, "/api")]
-pub async fn get_projects() -> Result<Vec<Project>, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        use portfolio::service::PortfolioService;
-        use std::path::PathBuf;
-
-        // Use current directory content/ as base path
-        let content_dir = PathBuf::from("content");
-        let service = PortfolioService::new(content_dir);
-        
-        let projects = service.get_all_projects().map_err(|e| {
-            let err: ServerFnError = ServerFnError::ServerError(e.to_string());
-            err
-        })?;
-        Ok(projects)
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(GetBooks, "/api")]
-pub async fn get_books() -> Result<Vec<Book>, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        let pool = expect_context::<sqlx::PgPool>();
-        let service = books::service::BookService::new(pool);
-        let books = service.get_reading_list().await.map_err(|e| {
-            let err: ServerFnError = ServerFnError::ServerError(e.to_string());
-            err
-        })?;
-        Ok(books)
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(GetArticles, "/api")]
-pub async fn get_articles() -> Result<Vec<Article>, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        use articles::service::ArticleService;
-        use std::path::PathBuf;
-
-        let content_dir = PathBuf::from("content");
-        let service = ArticleService::new(content_dir);
-        let articles = service.get_all_articles().map_err(|e| {
-            let err: ServerFnError = ServerFnError::ServerError(e.to_string());
-            err
-        })?;
-        Ok(articles)
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(GetArticle, "/api")]
-pub async fn get_article(slug: String) -> Result<(Article, i64), ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        use articles::service::ArticleService;
-        use std::path::PathBuf;
-
-        let content_dir = PathBuf::from("content");
-        let service = ArticleService::new(content_dir);
-        let article = service.get_article(&slug).map_err(|e| {
-            let err: ServerFnError = ServerFnError::ServerError(e.to_string());
-            err
-        })?;
-        
-        let pool = expect_context::<sqlx::PgPool>();
-        let analytics = analytics::AnalyticsService::new(pool);
-        let views = analytics.get_view_count(&slug).await.unwrap_or(0);
-        
-        Ok((article, views))
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(RecordView, "/api")]
-pub async fn record_view(slug: String) -> Result<(), ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        let pool = expect_context::<sqlx::PgPool>();
-        let analytics = analytics::AnalyticsService::new(pool);
-        let _ = analytics.record_view(&slug).await;
-        Ok(())
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(GetAnalytics, "/api")]
-pub async fn get_analytics() -> Result<Vec<UiPageView>, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        let pool = expect_context::<sqlx::PgPool>();
-        let analytics_service = analytics::AnalyticsService::new(pool);
-        let views = analytics_service.get_all_views().await.unwrap_or_default();
-        
-        let ui_views = views.into_iter().map(|v| UiPageView {
-            slug: v.slug,
-            view_count: v.view_count,
-        }).collect();
-        
-        Ok(ui_views)
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(RebuildSearchIndex, "/api")]
-pub async fn rebuild_search_index() -> Result<(), ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        let search_service = expect_context::<search::SearchService>();
-        search_service.index_articles(&std::path::PathBuf::from("content")).map_err(|e| {
-            let err: ServerFnError = ServerFnError::ServerError(e.to_string());
-            err
-        })?;
-        Ok(())
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
-
-#[server(CheckAuth, "/api")]
-pub async fn check_auth() -> Result<bool, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        // For now, assume true, we will lock it down later.
-        Ok(true)
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
+use domain::models::{Project, Book, Article};
+use api::*;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -542,8 +348,8 @@ fn HomePage() -> impl IntoView {
                 "Whether you need a systems engineer, a SQL optimizer, or an AI prompt architect — let's talk."
             </p>
             <div class="hero-actions" style="justify-content: center;">
-                <A href="/contact" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1.1rem; font-weight: 600;">"Start a Conversation"</A>
-                <A href="/about" class="btn btn-secondary" style="padding: 0.8rem 2rem; font-size: 1.1rem; font-weight: 600;">"Download Resume"</A>
+                <A href="/contact" class="btn btn-primary">"Start a Conversation"</A>
+                <A href="/about" class="btn btn-secondary">"Download Resume"</A>
             </div>
         </section>
     }
@@ -586,21 +392,21 @@ fn ProjectsPage() -> impl IntoView {
                                 <div class="projects-grid">
                                     {projs.into_iter().map(|p| view! {
                                         <div class="project-card">
-                                            <div class="project-image">"🚀"</div>
-                                            <div class="project-body">
-                                                <div class="project-type">"Project"</div>
-                                                <h2 class="project-title">{p.metadata.title}</h2>
-                                                <p class="project-desc">{p.metadata.description}</p>
-                                                <div class="project-tech">
-                                                    {p.metadata.tags.into_iter().map(|t| view! { 
-                                                        <span>{t}</span> 
+                                            <div class="project-content">
+                                                <h2 class="project-title">{p.title}</h2>
+                                                <p class="project-desc">{p.description}</p>
+                                                <div class="project-tags">
+                                                    {p.tags.into_iter().map(|t| view! {
+                                                        <span class="tag">{t}</span>
                                                     }).collect_view()}
                                                 </div>
-                                                <div class="project-prose" inner_html=p.content_html></div>
                                                 <div class="project-links">
-                                                    {if let Some(url) = p.metadata.github_url {
-                                                        view! { <a href=url target="_blank" class="project-link">"View on GitHub →"</a> }.into_view()
-                                                    } else { view! {}.into_view() }}
+                                                    {if let Some(url) = p.github_url {
+                                                        Some(view! { <a href=url target="_blank" class="project-link">"GitHub"</a> })
+                                                    } else { None }}
+                                                    {if let Some(url) = p.live_url {
+                                                        Some(view! { <a href=url target="_blank" class="project-link">"Live Demo"</a> })
+                                                    } else { None }}
                                                 </div>
                                             </div>
                                         </div>
@@ -679,32 +485,31 @@ fn ArticlesPage() -> impl IntoView {
                 </div> 
             }>
                 {move || {
-                    articles.get().map(|arts| {
-                        if arts.is_empty() {
+                    articles.get().map(|articles| {
+                        if articles.is_empty() {
                             view! { <p class="text-muted">"No articles found."</p> }.into_view()
                         } else {
                             view! {
-                                <div class="articles-grid">
-                                    {arts.into_iter().map(|a| {
-                                        let slug = a.metadata.slug.clone();
+                                <div class="articles-list">
+                                    {articles.into_iter().map(|a| {
+                                        let slug = a.slug.clone();
                                         view! {
-                                            <A href=format!("/articles/{}", slug) class="article-card">
-                                                <div class="article-cover">"📄"</div>
-                                                <div class="article-body">
-                                                    <div class="article-meta">
-                                                        <span><time>{a.metadata.created_at}</time></span>
-                                                    </div>
-                                                    <h2 class="article-title">
-                                                        {a.metadata.title}
-                                                    </h2>
-                                                    <p class="article-excerpt">{a.metadata.description}</p>
-                                                    <div class="article-tags">
-                                                        {a.metadata.tags.into_iter().map(|t| view! { 
-                                                            <span class="article-tag">{t}</span> 
-                                                        }).collect_view()}
-                                                    </div>
+                                            <article class="article-card animate-slide-up">
+                                                <div class="article-meta">
+                                                    <span>"Article"</span>
+                                                    <span class="dot">"•"</span>
+                                                    <span><time>{a.created_at.to_rfc3339()}</time></span>
                                                 </div>
-                                            </A>
+                                                <h2 class="article-title"><A href=format!("/writing/{}", slug)>
+                                                    {a.title}
+                                                </A></h2>
+                                                <p class="article-excerpt">{a.description}</p>
+                                                <div class="article-tags">
+                                                    {a.tags.into_iter().map(|t| view! {
+                                                        <span class="tag">{t}</span>
+                                                    }).collect_view()}
+                                                </div>
+                                            </article>
                                         }
                                     }).collect_view()}
                                 </div>
@@ -725,16 +530,6 @@ fn ArticlePage() -> impl IntoView {
     // We get a tuple: (Article, views)
     let article = create_resource(slug, |s| async move { get_article(s).await.ok() });
     
-    // Create an effect to record view once on the client
-    create_effect(move |_| {
-        let current_slug = slug();
-        if !current_slug.is_empty() {
-            spawn_local(async move {
-                let _ = record_view(current_slug).await;
-            });
-        }
-    });
-
     view! {
         <div class="page-section max-w-3xl animate-fade-in">
             <Transition fallback=move || view! { 
@@ -748,28 +543,45 @@ fn ArticlePage() -> impl IntoView {
                 {move || {
                     article.get().map(|opt| {
                         match opt {
-                            Some((art, views)) => view! {
-                                <Title text=art.metadata.title.clone() />
-                                <Meta name="description" content=art.metadata.description.clone() />
-                                <article>
-                                    <h1 class="article-main-title">{art.metadata.title}</h1>
-                                    <div class="article-header-meta">
-                                        <time>{art.metadata.created_at}</time>
-                                        <span>" • " {views} " views"</span>
-                                    </div>
-                                    
-                                    <div class="content-prose article-prose" inner_html=art.content_html></div>
-                                    
-                                    <div class="article-footer">
-                                        <div class="tag-list">
-                                            {art.metadata.tags.into_iter().map(|t| view! { 
-                                                <span class="tag tag-rounded">{t}</span> 
-                                            }).collect_view()}
-                                        </div>
-                                    </div>
-                                    <Script>"setTimeout(() => document.querySelectorAll('.prose pre code').forEach(hljs.highlightElement), 100);"</Script>
-                                </article>
-                            }.into_view(),
+                            Some((art, views)) => {
+                                // Now record view when loaded
+                                create_effect(move |_| {
+                                    let slug_val = slug();
+                                    if !slug_val.is_empty() {
+                                        spawn_local(async move {
+                                            let _ = record_view(slug_val).await;
+                                        });
+                                    }
+                                });
+                
+                                view! {
+                                    <Title text=art.title.clone() />
+                                    <Meta name="description" content=art.description.clone().unwrap_or_default() />
+                                    <article class="article-full container">
+                                        <header class="article-header">
+                                            <h1 class="article-main-title">{art.title}</h1>
+                                            <div class="article-meta-row">
+                                                <time>{art.created_at.to_rfc3339()}</time>
+                                                <span class="dot">"•"</span>
+                                                <span>{views} " views"</span>
+                                            </div>
+                                        </header>
+                                        <div class="article-content prose" inner_html=art.body></div>
+                                        
+                                        <footer class="article-footer">
+                                            <div class="article-tags">
+                                                {art.tags.into_iter().map(|t| view! {
+                                                    <span class="tag">{t}</span>
+                                                }).collect_view()}
+                                            </div>
+                                            
+                                            <div class="article-nav">
+                                                <A href="/writing" class="back-link">"← Back to Writing"</A>
+                                            </div>
+                                        </footer>
+                                    </article>
+                                }.into_view()
+                            },
                             None => view! { <NotFound/> }.into_view()
                         }
                     })
@@ -797,38 +609,7 @@ fn NotFound() -> impl IntoView {
     }
 }
 
-#[server(Login, "/api")]
-pub async fn login(email: String, password: String) -> Result<bool, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        use auth::service::AuthService;
-        use std::env;
-        use leptos_axum::ResponseOptions;
-
-        let pool = expect_context::<sqlx::PgPool>();
-        let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "dev_secret_key_12345".to_string());
-        
-        let auth_service = AuthService::new(pool, secret);
-        match auth_service.login(&email, &password).await {
-            Ok(token) => {
-                if let Some(resp_options) = use_context::<ResponseOptions>() {
-                    resp_options.insert_header(
-                        axum::http::header::SET_COOKIE,
-                        axum::http::HeaderValue::from_str(&format!("auth_token={}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800", token)).unwrap(),
-                    );
-                }
-                Ok(true)
-            },
-            Err(e) => {
-                Err(ServerFnError::ServerError(e.to_string()))
-            }
-        }
-    }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
-    }
-}
+// Login function moved to api
 
 #[component]
 pub fn LoginPage() -> impl IntoView {

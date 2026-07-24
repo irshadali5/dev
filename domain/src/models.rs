@@ -18,11 +18,31 @@ pub struct Article {
     pub slug: String,
     pub title: String,
     pub description: Option<String>,
-    pub body: String,
+    pub body: String, // This will store the HTML or MD content
     pub published: bool,
     pub author_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    
+    // We can populate tags manually if needed
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Project {
+    pub id: Uuid,
+    pub slug: String,
+    pub title: String,
+    pub description: String,
+    pub content_html: String,
+    pub github_url: Option<String>,
+    pub live_url: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
