@@ -202,9 +202,17 @@ pub async fn check_auth() -> Result<bool, ServerFnError> {
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+    
+    let (theme, set_theme) = create_signal("dark".to_string());
+    
+    let toggle_theme = move |_| {
+        set_theme.update(|t| {
+            *t = if t == "dark" { "light".to_string() } else { "dark".to_string() };
+        });
+    };
 
     view! {
-        <Html lang="en"/>
+        <Html lang="en" attr:data-theme=move || theme.get()/>
         <Stylesheet id="leptos" href="/pkg/dev-site.css"/>
         <Title text="Irshad - Developer & Writer"/>
         // Highlight.js
@@ -213,60 +221,128 @@ pub fn App() -> impl IntoView {
         <Script>"document.addEventListener('DOMContentLoaded', (event) => { document.querySelectorAll('pre code').forEach((block) => { hljs.highlightElement(block); }); });"</Script>
 
         <Router>
-            <main class="app-layout">
-                <nav class="app-navbar glass-panel">
-                    <div class="navbar-brand bg-gradient-primary">
-                        <A href="/">"Irshad"</A>
+            <nav class="navbar" id="navbar">
+                <div class="nav-container">
+                    <A href="/" class="nav-logo">
+                        <span class="logo-bracket">"<"</span>"IA"<span class="logo-bracket">"/>"</span>
+                    </A>
+                    <div class="nav-links" id="navLinks">
+                        <A href="/" class="nav-link" active_class="active" exact=true>"Home"</A>
+                        <A href="/projects" class="nav-link" active_class="active">"Portfolio"</A>
+                        <A href="/articles" class="nav-link" active_class="active">"Articles"</A>
+                        <A href="/books" class="nav-link" active_class="active">"Books"</A>
+                        <A href="/about" class="nav-link" active_class="active">"About"</A>
                     </div>
-                    <div class="navbar-links">
-                        <A href="/about" class="nav-link" active_class="nav-link-active">"About"</A>
-                        <A href="/projects" class="nav-link" active_class="nav-link-active">"Projects"</A>
-                        <A href="/books" class="nav-link" active_class="nav-link-active">"Books"</A>
-                        <A href="/articles" class="nav-link" active_class="nav-link-active">"Articles"</A>
-                    </div>
-                    <div class="navbar-actions">
-                        <A href="/search" class="icon-link">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <div class="nav-actions">
+                        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" on:click=toggle_theme>
+                            <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
                             </svg>
-                        </A>
-                        <A href="/admin" class="nav-link text-sm">"Admin"</A>
+                            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </button>
+                        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
+                            <span></span><span></span><span></span>
+                        </button>
                     </div>
-                </nav>
-                <div class="app-content">
-                    <Routes>
-                        <Route path="" view=HomePage/>
-                        <Route path="about" view=AboutPage/>
-                        <Route path="search" view=SearchPage/>
-                        <Route path="projects" view=ProjectsPage/>
-                        <Route path="books" view=BooksPage/>
-                        <Route path="articles" view=ArticlesPage/>
-                        <Route path="articles/:slug" view=ArticlePage/>
-                        <Route path="login" view=LoginPage/>
-                        <Route path="admin" view=AdminDashboard>
-                            <Route path="" view=AdminOverview/>
-                            <Route path="analytics" view=AdminAnalytics/>
-                            <Route path="settings" view=AdminSettings/>
-                        </Route>
-                        <Route path="/*any" view=NotFound/>
-                    </Routes>
                 </div>
-                <footer class="terminal-footer">
-                    <div class="terminal-footer-content">
-                        <p class="terminal-prompt">"cat sys_info.txt"</p>
-                        <p>"OS: IrshadOS v1.0.0"</p>
-                        <p>"Kernel: Rust x86_64"</p>
-                        <p class="terminal-prompt">"ls -la links/"</p>
-                        <p>
-                            "drwxr-xr-x 2 irshad users 4096 "
-                            <a href="https://github.com/irshad" target="_blank" class="terminal-link">"github"</a>
-                            "  "
-                            <a href="https://twitter.com/irshad" target="_blank" class="terminal-link">"twitter"</a>
-                        </p>
-                        <p class="terminal-prompt mt-4" style="color: #64748b; font-size: 0.75rem;">"© 2026 Irshad. EOF."</p>
-                    </div>
-                </footer>
+            </nav>
+            <main id="app">
+                <Routes>
+                    <Route path="" view=HomePage/>
+                    <Route path="about" view=AboutPage/>
+                    <Route path="search" view=SearchPage/>
+                    <Route path="projects" view=ProjectsPage/>
+                    <Route path="books" view=BooksPage/>
+                    <Route path="articles" view=ArticlesPage/>
+                    <Route path="articles/:slug" view=ArticlePage/>
+                    <Route path="login" view=LoginPage/>
+                    <Route path="admin" view=AdminDashboard>
+                        <Route path="" view=AdminOverview/>
+                        <Route path="analytics" view=AdminAnalytics/>
+                        <Route path="settings" view=AdminSettings/>
+                    </Route>
+                    <Route path="/*any" view=NotFound/>
+                </Routes>
             </main>
+            <footer class="terminal-footer" role="contentinfo">
+                <div class="terminal-window">
+                    <div class="terminal-header" aria-hidden="true">
+                        <div class="terminal-controls">
+                            <span class="control red"></span>
+                            <span class="control yellow"></span>
+                            <span class="control green"></span>
+                        </div>
+                        <div class="terminal-title">"irshad@portfolio:~$ cat ./system/info.md"</div>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="terminal-grid">
+                            <div class="terminal-block">
+                                <div class="terminal-comment">"# SYSTEM_IDENTITY"</div>
+                                <div class="terminal-prompt">
+                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"whoami"</span>
+                                </div>
+                                <div class="terminal-output">
+                                    <span class="accent">"<Irshad Ali />"</span>
+                                    "Systems Programmer & AI Engineer"<br/>
+                                    "C++ • Rust • SQL • GNU/Linux"
+                                </div>
+                                <div class="terminal-prompt">
+                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"echo $STATUS"</span>
+                                </div>
+                                <div class="terminal-output success">"[AVAILABLE FOR HIRE]"</div>
+                            </div>
+                            <div class="terminal-block">
+                                <div class="terminal-comment">"# NAVIGATION"</div>
+                                <div class="terminal-prompt">
+                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"ls -la"</span>
+                                </div>
+                                <div class="terminal-output">
+                                    <A href="/" class="terminal-link">"drwxr-xr-x  home/"</A>
+                                    <A href="/projects" class="terminal-link">"drwxr-xr-x  portfolio/"</A>
+                                    <A href="/articles" class="terminal-link">"drwxr-xr-x  articles/"</A>
+                                    <A href="/books" class="terminal-link">"drwxr-xr-x  books/"</A>
+                                    <A href="/about" class="terminal-link">"-rw-r--r--  about.md"</A>
+                                </div>
+                            </div>
+                            <div class="terminal-block">
+                                <div class="terminal-comment">"# NETWORK_PORTS"</div>
+                                <div class="terminal-prompt">
+                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"netstat -tulpn"</span>
+                                </div>
+                                <div class="terminal-output">
+                                    <a href="https://github.com/irshadali5" target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 github.com:443 ESTABLISHED"</a>
+                                    <a href="https://linkedin.com/in/irshadali" target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 linkedin.com:443 ESTABLISHED"</a>
+                                    <a href="mailto:hello@irshadali.dev" class="terminal-link">"tcp 0 0 smtp.mail:587 LISTENING"</a>
+                                </div>
+                            </div>
+                            <div class="terminal-block">
+                                <div class="terminal-comment">"# SKILL_TREE (Beginner → Advanced)"</div>
+                                <div class="terminal-prompt">
+                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"./show_progress.sh"</span>
+                                </div>
+                                <div class="terminal-output skill-tree">
+                                    <div class="skill-level"><span class="lvl-num">"[LVL 1]"</span> <span class="lvl-name">"Bash/Linux"</span> <span class="lvl-bar">"██████████"</span> <span class="lvl-pct">"100%"</span></div>
+                                    <div class="skill-level"><span class="lvl-num">"[LVL 2]"</span> <span class="lvl-name">"SQL/Indexing"</span> <span class="lvl-bar">"██████████"</span> <span class="lvl-pct">"100%"</span></div>
+                                    <div class="skill-level"><span class="lvl-num">"[LVL 3]"</span> <span class="lvl-name">"C++ & STL"</span> <span class="lvl-bar">"████████░░"</span> <span class="lvl-pct">"85%"</span></div>
+                                    <div class="skill-level"><span class="lvl-num">"[LVL 4]"</span> <span class="lvl-name">"Rust/Safety"</span> <span class="lvl-bar">"███████░░░"</span> <span class="lvl-pct">"75%"</span></div>
+                                    <div class="skill-level"><span class="lvl-num">"[LVL 5]"</span> <span class="lvl-name">"AI/Prompts"</span> <span class="lvl-bar">"█████████░"</span> <span class="lvl-pct">"90%"</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="terminal-footer-bottom">
+                            <div class="terminal-prompt">
+                                <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"uptime"</span>
+                            </div>
+                            <div class="terminal-output">
+                                "© 2026 Irshad Ali. System Uptime: " <span class="uptime-val">"5y 14d 08h 32m"</span>". Compiled with Leptos & Axum. "<span class="cursor" aria-hidden="true"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </Router>
     }
 }
@@ -274,18 +350,202 @@ pub fn App() -> impl IntoView {
 #[component]
 fn HomePage() -> impl IntoView {
     view! {
-        <div class="hero-section animate-slide-up">
-            <h1 class="hero-title bg-gradient-secondary">
-                "Irshad"
-            </h1>
-            <p class="hero-subtitle">
-                "Software Engineer, Open Source Contributor, and Writer."
-            </p>
-            <div class="hero-actions">
-                <A href="/projects" class="glass-button font-medium">"View Projects"</A>
-                <A href="/articles" class="text-link">"Read Articles →"</A>
+        <section class="hero">
+            <div class="hero-grid-bg"></div>
+            <div class="hero-orb hero-orb-1"></div>
+            <div class="hero-orb hero-orb-2"></div>
+            <div class="hero-orb hero-orb-3"></div>
+            <div class="container hero-content">
+                <h1 class="hero-title">
+                    "Hi, I'm "<span class="gradient-text">"Irshad Ali"</span>"."<br/>
+                    "I build systems"<br/>
+                    "that "<span class="gradient-text">"perform"</span>"."
+                </h1>
+                <p class="hero-subtitle">
+                    "I write C++ for speed, Rust for safety, SQL for data, and prompts for intelligence. Welcome to my corner of the internet."
+                </p>
+                <div class="hero-actions">
+                    <A href="/projects" class="btn btn-primary">
+                        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        "View Portfolio"
+                    </A>
+                    <A href="/articles" class="btn btn-secondary">
+                        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        "Read Articles"
+                    </A>
+                    <A href="/contact" class="text-link">"Get in Touch →"</A>
+                </div>
+                <div class="hero-stats">
+                    <div>
+                        <span class="hero-stat-number">"5+"</span>
+                        <span class="hero-stat-label">"Years in Systems"</span>
+                    </div>
+                    <div>
+                        <span class="hero-stat-number">"30+"</span>
+                        <span class="hero-stat-label">"Projects Shipped"</span>
+                    </div>
+                    <div>
+                        <span class="hero-stat-number">"15+"</span>
+                        <span class="hero-stat-label">"Articles Published"</span>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
+
+        <section class="page-section container" style="margin-top: 80px;">
+            <div class="section-header">
+                <span class="section-label">"EXPERTISE"</span>
+                <h2 class="section-title">"Skills & Technologies"</h2>
+                <p class="section-subtitle">"A specialist's toolkit — built around performance, safety, and reliability."</p>
+            </div>
+            
+            <div class="skills-grid">
+                <div class="skill-category">
+                    <div class="skill-category-icon">"⚡"</div>
+                    <h3>"Systems Programming"</h3>
+                    <div class="skill-tags">
+                        <span class="skill-tag">"C++"</span>
+                        <span class="skill-tag">"C++20"</span>
+                        <span class="skill-tag">"Rust"</span>
+                        <span class="skill-tag">"Memory Management"</span>
+                        <span class="skill-tag">"Concurrency"</span>
+                        <span class="skill-tag">"Lock-Free DS"</span>
+                    </div>
+                </div>
+                <div class="skill-category">
+                    <div class="skill-category-icon">"🐧"</div>
+                    <h3>"GNU/Linux & DevOps"</h3>
+                    <div class="skill-tags">
+                        <span class="skill-tag">"Bash"</span>
+                        <span class="skill-tag">"Systemd"</span>
+                        <span class="skill-tag">"Docker"</span>
+                        <span class="skill-tag">"Linux Kernel"</span>
+                        <span class="skill-tag">"GCC/Clang"</span>
+                        <span class="skill-tag">"Make/CMake"</span>
+                    </div>
+                </div>
+                <div class="skill-category">
+                    <div class="skill-category-icon">"🗄️"</div>
+                    <h3>"Data & SQL"</h3>
+                    <div class="skill-tags">
+                        <span class="skill-tag">"PostgreSQL"</span>
+                        <span class="skill-tag">"MySQL"</span>
+                        <span class="skill-tag">"SQLite"</span>
+                        <span class="skill-tag">"Query Optimization"</span>
+                        <span class="skill-tag">"Schema Design"</span>
+                        <span class="skill-tag">"Redis"</span>
+                    </div>
+                </div>
+                <div class="skill-category">
+                    <div class="skill-category-icon">"🤖"</div>
+                    <h3>"AI & Prompt Engineering"</h3>
+                    <div class="skill-tags">
+                        <span class="skill-tag">"LLMs"</span>
+                        <span class="skill-tag">"Chain-of-Thought"</span>
+                        <span class="skill-tag">"Structured Output"</span>
+                        <span class="skill-tag">"RAG"</span>
+                        <span class="skill-tag">"OpenAI API"</span>
+                        <span class="skill-tag">"LangChain"</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="page-section container" style="margin-top: 80px; margin-bottom: 80px;">
+            <div class="section-header">
+                <span class="section-label">"FEATURED WORK"</span>
+                <h2 class="section-title">"Selected Projects"</h2>
+            </div>
+            
+            <div class="projects-grid">
+                <div class="project-card">
+                    <div class="project-cover" style="font-size: 4rem; text-align: center; padding: 3rem 0; background: var(--bg-card); border-bottom: 1px solid var(--border);">"🦀"</div>
+                    <div class="project-body">
+                        <div class="project-type">"SYSTEMS"</div>
+                        <h3 class="project-title">"Lock-Free Queue (Rust)"</h3>
+                        <p class="project-desc">"A Michael-Scott lock-free queue implementation with 28M ops/sec throughput, zero unsafe blocks in the public API."</p>
+                        <div class="project-tech">
+                            <span class="skill-tag">"Rust"</span>
+                            <span class="skill-tag">"Atomics"</span>
+                            <span class="skill-tag">"Concurrency"</span>
+                        </div>
+                        <div class="project-links mt-4" style="margin-top: 1.5rem;">
+                            <a href="#" class="project-link">"🔗 Live Demo"</a>
+                            <a href="#" class="project-link">"📁 Source Code"</a>
+                            <a href="#" class="project-link">"📖 Case Study"</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="project-card">
+                    <div class="project-cover" style="font-size: 4rem; text-align: center; padding: 3rem 0; background: var(--bg-card); border-bottom: 1px solid var(--border);">"⚙️"</div>
+                    <div class="project-body">
+                        <div class="project-type">"SYSTEMS"</div>
+                        <h3 class="project-title">"C++ Memory Allocator"</h3>
+                        <p class="project-desc">"Custom slab allocator 4x faster than glibc malloc for specific workloads, used in a high-frequency trading system."</p>
+                        <div class="project-tech">
+                            <span class="skill-tag">"C++"</span>
+                            <span class="skill-tag">"Templates"</span>
+                            <span class="skill-tag">"Benchmarking"</span>
+                        </div>
+                        <div class="project-links mt-4" style="margin-top: 1.5rem;">
+                            <a href="#" class="project-link">"🔗 Live Demo"</a>
+                            <a href="#" class="project-link">"📁 Source Code"</a>
+                            <a href="#" class="project-link">"📖 Case Study"</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="project-card">
+                    <div class="project-cover" style="font-size: 4rem; text-align: center; padding: 3rem 0; background: var(--bg-card); border-bottom: 1px solid var(--border);">"🤖"</div>
+                    <div class="project-body">
+                        <div class="project-type">"AI/PROMPT"</div>
+                        <h3 class="project-title">"AI Content Extractor"</h3>
+                        <p class="project-desc">"Production LLM pipeline extracting structured data from 10K+ documents daily with 94% accuracy via schema-first prompting."</p>
+                        <div class="project-tech">
+                            <span class="skill-tag">"Python"</span>
+                            <span class="skill-tag">"OpenAI"</span>
+                            <span class="skill-tag">"PostgreSQL"</span>
+                        </div>
+                        <div class="project-links mt-4" style="margin-top: 1.5rem;">
+                            <a href="#" class="project-link">"🔗 Live Demo"</a>
+                            <a href="#" class="project-link">"📁 Source Code"</a>
+                            <a href="#" class="project-link">"📖 Case Study"</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 48px;">
+                <A href="/projects" class="btn btn-secondary">"View All Projects →"</A>
+            </div>
+        </section>
+
+        <section class="page-section container" style="margin-top: 80px;">
+            <div class="section-header">
+                <span class="section-label">"WRITING"</span>
+                <h2 class="section-title">"Latest Articles"</h2>
+                <p class="section-subtitle">"Deep dives into systems programming, database optimization, and AI prompt engineering."</p>
+            </div>
+            
+            <div style="display: flex; justify-content: center; padding: 4rem 0;">
+                <div class="spinner" style="width: 48px; height: 48px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent);"></div>
+            </div>
+        </section>
+
+        <section class="page-section container" style="margin-top: 120px; margin-bottom: 120px; text-align: center;">
+            <h1 class="hero-title" style="margin-bottom: 1.5rem; font-size: 3.5rem;">
+                "Let's Build Something "<span class="gradient-text">"Fast,"</span><br/>
+                <span class="gradient-text">"Safe & Smart"</span>
+            </h1>
+            <p class="hero-subtitle" style="margin: 0 auto 3rem auto; max-width: 600px;">
+                "Whether you need a systems engineer, a SQL optimizer, or an AI prompt architect — let's talk."
+            </p>
+            <div class="hero-actions" style="justify-content: center;">
+                <A href="/contact" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1.1rem; font-weight: 600;">"Start a Conversation"</A>
+                <A href="/about" class="btn btn-secondary" style="padding: 0.8rem 2rem; font-size: 1.1rem; font-weight: 600;">"Download Resume"</A>
+            </div>
+        </section>
     }
 }
 
@@ -309,12 +569,12 @@ fn ProjectsPage() -> impl IntoView {
     view! {
         <Title text="Projects - Irshad"/>
         <Meta name="description" content="Open source projects, libraries, and systems I've built."/>
-        <div class="page-section animate-fade-in">
-            <h1 class="page-title">"Projects"</h1>
+        <div class="page-section animate-fade-in container">
+            <h1 class="section-title">"Projects"</h1>
             <Transition fallback=move || view! { 
-                <div class="project-grid">
-                    <div class="skeleton-loader glass-panel" style="height: 180px;"></div>
-                    <div class="skeleton-loader glass-panel" style="height: 180px;"></div>
+                <div class="projects-grid">
+                    <div class="skeleton-loader project-card" style="height: 180px;"></div>
+                    <div class="skeleton-loader project-card" style="height: 180px;"></div>
                 </div> 
             }>
                 {move || {
@@ -323,20 +583,26 @@ fn ProjectsPage() -> impl IntoView {
                             view! { <p class="text-muted">"No projects found."</p> }.into_view()
                         } else {
                             view! {
-                                <div class="project-grid">
+                                <div class="projects-grid">
                                     {projs.into_iter().map(|p| view! {
-                                        <div class="project-card glass-panel">
-                                            <h2 class="project-title">{p.metadata.title}</h2>
-                                            <p class="project-description">{p.metadata.description}</p>
-                                            <div class="tag-list">
-                                                {p.metadata.tags.into_iter().map(|t| view! { 
-                                                    <span class="tag">{t}</span> 
-                                                }).collect_view()}
+                                        <div class="project-card">
+                                            <div class="project-image">"🚀"</div>
+                                            <div class="project-body">
+                                                <div class="project-type">"Project"</div>
+                                                <h2 class="project-title">{p.metadata.title}</h2>
+                                                <p class="project-desc">{p.metadata.description}</p>
+                                                <div class="project-tech">
+                                                    {p.metadata.tags.into_iter().map(|t| view! { 
+                                                        <span>{t}</span> 
+                                                    }).collect_view()}
+                                                </div>
+                                                <div class="project-prose" inner_html=p.content_html></div>
+                                                <div class="project-links">
+                                                    {if let Some(url) = p.metadata.github_url {
+                                                        view! { <a href=url target="_blank" class="project-link">"View on GitHub →"</a> }.into_view()
+                                                    } else { view! {}.into_view() }}
+                                                </div>
                                             </div>
-                                            <div class="project-prose" inner_html=p.content_html></div>
-                                            {if let Some(url) = p.metadata.github_url {
-                                                view! { <a href=url target="_blank" class="project-link">"View on GitHub →"</a> }.into_view()
-                                            } else { view! {}.into_view() }}
                                         </div>
                                     }).collect_view()}
                                 </div>
@@ -354,14 +620,14 @@ fn BooksPage() -> impl IntoView {
     let books = create_resource(|| (), |_| async move { get_books().await.unwrap_or_default() });
 
     view! {
-        <div class="page-section animate-fade-in">
-            <h1 class="page-title">"Reading List"</h1>
-            <p class="page-subtitle">"Books I've read and recommend."</p>
+        <div class="page-section animate-fade-in container">
+            <h1 class="section-title">"Reading List"</h1>
+            <p class="section-subtitle">"Books I've read and recommend."</p>
             <Transition fallback=move || view! { 
-                <div class="book-grid">
-                    <div class="skeleton-loader glass-panel" style="height: 140px;"></div>
-                    <div class="skeleton-loader glass-panel" style="height: 140px;"></div>
-                    <div class="skeleton-loader glass-panel" style="height: 140px;"></div>
+                <div class="books-grid">
+                    <div class="skeleton-loader book-card" style="height: 140px;"></div>
+                    <div class="skeleton-loader book-card" style="height: 140px;"></div>
+                    <div class="skeleton-loader book-card" style="height: 140px;"></div>
                 </div> 
             }>
                 {move || {
@@ -370,13 +636,16 @@ fn BooksPage() -> impl IntoView {
                             view! { <p class="text-muted">"No books found."</p> }.into_view()
                         } else {
                             view! {
-                                <div class="book-grid">
+                                <div class="books-grid">
                                     {bs.into_iter().map(|b| view! {
-                                        <div class="search-result-card glass-panel">
-                                            <h2 class="book-title">{b.title}</h2>
-                                            {if let Some(desc) = b.description {
-                                                view! { <p class="book-description">{desc}</p> }.into_view()
-                                            } else { view! {}.into_view() }}
+                                        <div class="book-card">
+                                            <div class="book-cover">"📚"</div>
+                                            <div class="book-info">
+                                                <h3>{b.title}</h3>
+                                                {if let Some(desc) = b.description {
+                                                    view! { <p>{desc}</p> }.into_view()
+                                                } else { view! {}.into_view() }}
+                                            </div>
                                         </div>
                                     }).collect_view()}
                                 </div>
@@ -396,13 +665,17 @@ fn ArticlesPage() -> impl IntoView {
     view! {
         <Title text="Articles - Irshad"/>
         <Meta name="description" content="Thoughts on Rust, Systems Engineering, and software architecture."/>
-        <div class="page-section animate-fade-in">
-            <h1 class="page-title">"Articles"</h1>
-            <p class="page-subtitle">"Thoughts on Rust, Systems Engineering, and software architecture."</p>
+        <div class="page-section animate-fade-in container">
+            <div class="articles-header">
+                <div>
+                    <h1 class="section-title">"Articles"</h1>
+                    <p class="section-subtitle">"Thoughts on Rust, Systems Engineering, and software architecture."</p>
+                </div>
+            </div>
             <Transition fallback=move || view! { 
-                <div class="article-list">
-                    <div class="skeleton-loader glass-panel" style="height: 120px;"></div>
-                    <div class="skeleton-loader glass-panel" style="height: 120px;"></div>
+                <div class="articles-grid">
+                    <div class="skeleton-loader article-card" style="height: 120px;"></div>
+                    <div class="skeleton-loader article-card" style="height: 120px;"></div>
                 </div> 
             }>
                 {move || {
@@ -411,19 +684,28 @@ fn ArticlesPage() -> impl IntoView {
                             view! { <p class="text-muted">"No articles found."</p> }.into_view()
                         } else {
                             view! {
-                                <div class="article-list">
-                                    {arts.into_iter().map(|a| view! {
-                                        <article class="article-card glass-panel">
-                                            <h2 class="article-title-wrap">
-                                                <A href=format!("/articles/{}", a.metadata.slug) class="article-title-link">
-                                                    {a.metadata.title}
-                                                </A>
-                                            </h2>
-                                            <p class="project-description">{a.metadata.description}</p>
-                                            <div class="article-meta">
-                                                <time>{a.metadata.created_at}</time>
-                                            </div>
-                                        </article>
+                                <div class="articles-grid">
+                                    {arts.into_iter().map(|a| {
+                                        let slug = a.metadata.slug.clone();
+                                        view! {
+                                            <A href=format!("/articles/{}", slug) class="article-card">
+                                                <div class="article-cover">"📄"</div>
+                                                <div class="article-body">
+                                                    <div class="article-meta">
+                                                        <span><time>{a.metadata.created_at}</time></span>
+                                                    </div>
+                                                    <h2 class="article-title">
+                                                        {a.metadata.title}
+                                                    </h2>
+                                                    <p class="article-excerpt">{a.metadata.description}</p>
+                                                    <div class="article-tags">
+                                                        {a.metadata.tags.into_iter().map(|t| view! { 
+                                                            <span class="article-tag">{t}</span> 
+                                                        }).collect_view()}
+                                                    </div>
+                                                </div>
+                                            </A>
+                                        }
                                     }).collect_view()}
                                 </div>
                             }.into_view()
