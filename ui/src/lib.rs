@@ -663,13 +663,13 @@ pub fn LoginPage() -> impl IntoView {
                     ev.prevent_default();
                     login_action.dispatch((email.get(), password.get()));
                 } class="auth-form">
-                    <div class="admin-sidebar-menu">
+                    <div class="form-group">
                         <label class="form-label">"Email"</label>
-                        <input type="email" class="input-field" on:input=move |ev| set_email.set(event_target_value(&ev)) prop:value=email/>
+                        <input type="email" class="form-input" on:input=move |ev| set_email.set(event_target_value(&ev)) prop:value=email/>
                     </div>
-                    <div class="admin-sidebar-menu">
+                    <div class="form-group">
                         <label class="form-label">"Password"</label>
-                        <input type="password" class="input-field" on:input=move |ev| set_password.set(event_target_value(&ev)) prop:value=password/>
+                        <input type="password" class="form-input" on:input=move |ev| set_password.set(event_target_value(&ev)) prop:value=password/>
                     </div>
                     <button type="submit" class="glass-button btn-primary btn-block">"Login"</button>
                 </form>
@@ -794,9 +794,10 @@ pub fn Authenticated(children: ChildrenFn) -> impl IntoView {
                             children_view.clone().into_view()
                         } else {
                             view! {
-                                <div class="error-section animate-fade-in">
-                                    <h1 class="text-4xl font-bold text-slate-100 mb-4">"Unauthorized"</h1>
-                                    <p class="text-muted">"You must be logged in to view this page. "<a href="/login" class="text-link">"Login here"</a></p>
+                                <div class="unauthorized-card animate-slide-up">
+                                    <h1>"Unauthorized"</h1>
+                                    <p class="text-muted mb-6" style="margin-bottom: 2rem;">"You must be logged in to view this page."</p>
+                                    <A href="/login" class="glass-button btn-primary">"Login here"</A>
                                 </div>
                             }.into_view()
                         }

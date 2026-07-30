@@ -12,7 +12,7 @@ members = [
     "markdown",
     "articles",
     "auth"
-, "analytics", "search", "assets"]
+, "analytics", "search", "assets", "hasher"]
 resolver = "2"
 
 [workspace.dependencies]
