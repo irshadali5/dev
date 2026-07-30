@@ -17,6 +17,11 @@ pub fn App() -> impl IntoView {
         });
     };
 
+    let (is_menu_open, set_menu_open) = create_signal(false);
+    let toggle_menu = move |_| {
+        set_menu_open.update(|open| *open = !*open);
+    };
+
     view! {
         <Html lang="en" attr:data-theme=move || theme.get()/>
         <Stylesheet id="leptos" href="/pkg/dev-site.css"/>
@@ -32,12 +37,12 @@ pub fn App() -> impl IntoView {
                     <A href="/" class="nav-logo">
                         <span class="logo-bracket">"<"</span>"IA"<span class="logo-bracket">"/>"</span>
                     </A>
-                    <div class="nav-links" id="navLinks">
-                        <A href="/" class="nav-link" active_class="active" exact=true>"Home"</A>
-                        <A href="/projects" class="nav-link" active_class="active">"Portfolio"</A>
-                        <A href="/articles" class="nav-link" active_class="active">"Articles"</A>
-                        <A href="/books" class="nav-link" active_class="active">"Books"</A>
-                        <A href="/about" class="nav-link" active_class="active">"About"</A>
+                    <div class=move || format!("nav-links {}", if is_menu_open.get() { "open" } else { "" }) id="navLinks">
+                        <A href="/" class="nav-link" active_class="active" exact=true on:click=move |_| set_menu_open.set(false)>"Home"</A>
+                        <A href="/projects" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Portfolio"</A>
+                        <A href="/articles" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Articles"</A>
+                        <A href="/books" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Books"</A>
+                        <A href="/about" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"About"</A>
                     </div>
                     <div class="nav-actions">
                         <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" on:click=toggle_theme>
@@ -49,8 +54,10 @@ pub fn App() -> impl IntoView {
                                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                             </svg>
                         </button>
-                        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
-                            <span></span><span></span><span></span>
+                        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu" on:click=toggle_menu>
+                            <span class=move || if is_menu_open.get() { "open" } else { "" }></span>
+                            <span class=move || if is_menu_open.get() { "open" } else { "" }></span>
+                            <span class=move || if is_menu_open.get() { "open" } else { "" }></span>
                         </button>
                     </div>
                 </div>

@@ -109,7 +109,7 @@ code, pre { font-family: var(--font-mono); }
    NAVBAR
    ============================================================ */
 .navbar {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
     height: var(--nav-height);
     background: rgba(2, 6, 23, 0.7);
     backdrop-filter: blur(20px) saturate(180%);
