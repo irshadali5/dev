@@ -121,6 +121,25 @@ pub async fn get_article(slug: String) -> Result<(Article, i64), ServerFnError> 
     }
 }
 
+#[server(SubmitContactForm, "/api")]
+pub async fn submit_contact_form(name: String, email: String, message: String) -> Result<bool, ServerFnError> {
+    // Basic validation
+    if name.is_empty() || email.is_empty() || message.is_empty() {
+        return Err(ServerFnError::ServerError("All fields are required".to_string()));
+    }
+    
+    #[cfg(feature = "ssr")]
+    {
+        // For now, just log it. Later, we can hook it up to an email service or save to DB.
+        println!("Received Contact Form Submission:\nName: {}\nEmail: {}\nMessage: {}", name, email, message);
+        Ok(true)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
 #[server(RecordView, "/api")]
 pub async fn record_view(slug: String) -> Result<(), ServerFnError> {
     #[cfg(feature = "ssr")]
@@ -162,7 +181,8 @@ pub async fn rebuild_search_index() -> Result<(), ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let search_service = expect_context::<search::SearchService>();
-        search_service.index_articles(&std::path::PathBuf::from("content")).map_err(|e| {
+        let pool = expect_context::<sqlx::PgPool>();
+        search_service.index_articles(pool).await.map_err(|e| {
             let err: ServerFnError = ServerFnError::ServerError(e.to_string());
             err
         })?;

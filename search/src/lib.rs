@@ -1,7 +1,6 @@
-use tantivy::{doc, Index, IndexWriter, schema::*, TantivyDocument};
+use tantivy::{doc, Index, schema::*, TantivyDocument};
 use tantivy::query::QueryParser;
 use tantivy::collector::TopDocs;
-use std::path::PathBuf;
 use thiserror::Error;
 use serde::{Serialize, Deserialize};
 use articles::service::ArticleService;

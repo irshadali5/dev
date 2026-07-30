@@ -1,4 +1,4 @@
-use image::{DynamicImage, ImageFormat};
+use image::DynamicImage;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use walkdir::WalkDir;

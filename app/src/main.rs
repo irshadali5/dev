@@ -18,18 +18,18 @@ async fn main() {
     #[cfg(feature = "ssr")]
     {
         use leptos::server_fn::ServerFn;
-        println!("LOGIN PATH: {}", ui::Login::PATH);
-        println!("RECORDVIEW PATH: {}", ui::RecordView::PATH);
-        let _ = ui::GetProjects::PATH;
-        let _ = ui::GetBooks::PATH;
-        let _ = ui::GetArticles::PATH;
-        let _ = ui::GetArticle::PATH;
-        let _ = ui::SearchContent::PATH;
-        let _ = ui::RecordView::PATH;
-        let _ = ui::GetAnalytics::PATH;
-        let _ = ui::RebuildSearchIndex::PATH;
-        let _ = ui::CheckAuth::PATH;
-        let _ = ui::Login::PATH;
+        println!("LOGIN PATH: {}", api::Login::PATH);
+        println!("RECORDVIEW PATH: {}", api::RecordView::PATH);
+        let _ = api::GetProjects::PATH;
+        let _ = api::GetBooks::PATH;
+        let _ = api::GetArticles::PATH;
+        let _ = api::GetArticle::PATH;
+        let _ = api::SearchContent::PATH;
+        let _ = api::RecordView::PATH;
+        let _ = api::GetAnalytics::PATH;
+        let _ = api::RebuildSearchIndex::PATH;
+        let _ = api::CheckAuth::PATH;
+        let _ = api::Login::PATH;
     }
     
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -46,7 +46,7 @@ async fn main() {
 
     // Initialize Search Service
     let search_service = search::SearchService::new().expect("Failed to initialize SearchService");
-    search_service.index_articles(&std::path::PathBuf::from("content")).expect("Failed to index articles");
+    search_service.index_articles(pool.clone()).await.expect("Failed to index articles");
 
 
     // Setting get_configuration(None) means we'll be using cargo-leptos's env values

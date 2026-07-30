@@ -1,6 +1,6 @@
 use domain::models::{User, Article, Book, Project};
 use sqlx::PgPool;
-use uuid::Uuid;
+
 
 pub struct UserRepository {
     pool: PgPool,

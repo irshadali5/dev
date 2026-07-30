@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use domain::models::{Project, Book, Article};
+
 use api::*;
 
 #[component]
@@ -9,7 +9,7 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     
-    let (theme, set_theme) = create_signal("dark".to_string());
+    let (theme, set_theme) = create_signal("light".to_string());
     
     let toggle_theme = move |_| {
         set_theme.update(|t| {
@@ -154,215 +154,189 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-fn HomePage() -> impl IntoView {
+fn ExperienceTimeline() -> impl IntoView {
     view! {
-        <section class="hero">
-            <div class="hero-grid-bg"></div>
-            <div class="hero-orb hero-orb-1"></div>
-            <div class="hero-orb hero-orb-2"></div>
-            <div class="hero-orb hero-orb-3"></div>
-            <div class="container hero-content">
-                <h1 class="hero-title">
-                    "Hi, I'm "<span class="gradient-text">"Irshad Ali"</span>"."<br/>
-                    "I build systems"<br/>
-                    "that "<span class="gradient-text">"perform"</span>"."
-                </h1>
-                <p class="hero-subtitle">
-                    "I write C++ for speed, Rust for safety, SQL for data, and prompts for intelligence. Welcome to my corner of the internet."
-                </p>
-                <div class="hero-actions">
-                    <A href="/projects" class="btn btn-primary">
-                        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                        "View Portfolio"
-                    </A>
-                    <A href="/articles" class="btn btn-secondary">
-                        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        "Read Articles"
-                    </A>
-                    <A href="/contact" class="text-link">"Get in Touch →"</A>
-                </div>
-                <div class="hero-stats">
-                    <div>
-                        <span class="hero-stat-number">"5+"</span>
-                        <span class="hero-stat-label">"Years in Systems"</span>
-                    </div>
-                    <div>
-                        <span class="hero-stat-number">"30+"</span>
-                        <span class="hero-stat-label">"Projects Shipped"</span>
-                    </div>
-                    <div>
-                        <span class="hero-stat-number">"15+"</span>
-                        <span class="hero-stat-label">"Articles Published"</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <section class="page-section container" style="margin-top: 80px;">
             <div class="section-header">
-                <span class="section-label">"EXPERTISE"</span>
-                <h2 class="section-title">"Skills & Technologies"</h2>
-                <p class="section-subtitle">"A specialist's toolkit — built around performance, safety, and reliability."</p>
+                <span class="section-label">"Background"</span>
+                <h2 class="section-title">"Experience & Education"</h2>
             </div>
             
-            <div class="skills-grid">
-                <div class="skill-category">
-                    <div class="skill-category-icon">"⚡"</div>
-                    <h3>"Systems Programming"</h3>
-                    <div class="skill-tags">
-                        <span class="skill-tag">"C++"</span>
-                        <span class="skill-tag">"C++20"</span>
-                        <span class="skill-tag">"Rust"</span>
-                        <span class="skill-tag">"Memory Management"</span>
-                        <span class="skill-tag">"Concurrency"</span>
-                        <span class="skill-tag">"Lock-Free DS"</span>
-                    </div>
-                </div>
-                <div class="skill-category">
-                    <div class="skill-category-icon">"🐧"</div>
-                    <h3>"GNU/Linux & DevOps"</h3>
-                    <div class="skill-tags">
-                        <span class="skill-tag">"Bash"</span>
-                        <span class="skill-tag">"Systemd"</span>
-                        <span class="skill-tag">"Docker"</span>
-                        <span class="skill-tag">"Linux Kernel"</span>
-                        <span class="skill-tag">"GCC/Clang"</span>
-                        <span class="skill-tag">"Make/CMake"</span>
-                    </div>
-                </div>
-                <div class="skill-category">
-                    <div class="skill-category-icon">"🗄️"</div>
-                    <h3>"Data & SQL"</h3>
-                    <div class="skill-tags">
-                        <span class="skill-tag">"PostgreSQL"</span>
-                        <span class="skill-tag">"MySQL"</span>
-                        <span class="skill-tag">"SQLite"</span>
-                        <span class="skill-tag">"Query Optimization"</span>
-                        <span class="skill-tag">"Schema Design"</span>
-                        <span class="skill-tag">"Redis"</span>
-                    </div>
-                </div>
-                <div class="skill-category">
-                    <div class="skill-category-icon">"🤖"</div>
-                    <h3>"AI & Prompt Engineering"</h3>
-                    <div class="skill-tags">
-                        <span class="skill-tag">"LLMs"</span>
-                        <span class="skill-tag">"Chain-of-Thought"</span>
-                        <span class="skill-tag">"Structured Output"</span>
-                        <span class="skill-tag">"RAG"</span>
-                        <span class="skill-tag">"OpenAI API"</span>
-                        <span class="skill-tag">"LangChain"</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="page-section container" style="margin-top: 80px; margin-bottom: 80px;">
-            <div class="section-header">
-                <span class="section-label">"FEATURED WORK"</span>
-                <h2 class="section-title">"Selected Projects"</h2>
-            </div>
-            
-            <div class="projects-grid">
-                <div class="project-card">
-                    <div class="project-cover" style="font-size: 4rem; text-align: center; padding: 3rem 0; background: var(--bg-card); border-bottom: 1px solid var(--border);">"🦀"</div>
-                    <div class="project-body">
-                        <div class="project-type">"SYSTEMS"</div>
-                        <h3 class="project-title">"Lock-Free Queue (Rust)"</h3>
-                        <p class="project-desc">"A Michael-Scott lock-free queue implementation with 28M ops/sec throughput, zero unsafe blocks in the public API."</p>
-                        <div class="project-tech">
-                            <span class="skill-tag">"Rust"</span>
-                            <span class="skill-tag">"Atomics"</span>
-                            <span class="skill-tag">"Concurrency"</span>
-                        </div>
-                        <div class="project-links mt-4" style="margin-top: 1.5rem;">
-                            <a href="#" class="project-link">"🔗 Live Demo"</a>
-                            <a href="#" class="project-link">"📁 Source Code"</a>
-                            <a href="#" class="project-link">"📖 Case Study"</a>
-                        </div>
+            <div class="timeline-container">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">"2023 - Present"</span>
+                        <h3 class="timeline-title">"Recent Graduate / Junior Developer"</h3>
+                        <div class="timeline-company">"Available for Hire"</div>
+                        <p class="timeline-desc">"Actively seeking roles in Systems Engineering, Backend Development, or Full-Stack Engineering. Strong foundation in Rust, C++, and PostgreSQL."</p>
                     </div>
                 </div>
                 
-                <div class="project-card">
-                    <div class="project-cover" style="font-size: 4rem; text-align: center; padding: 3rem 0; background: var(--bg-card); border-bottom: 1px solid var(--border);">"⚙️"</div>
-                    <div class="project-body">
-                        <div class="project-type">"SYSTEMS"</div>
-                        <h3 class="project-title">"C++ Memory Allocator"</h3>
-                        <p class="project-desc">"Custom slab allocator 4x faster than glibc malloc for specific workloads, used in a high-frequency trading system."</p>
-                        <div class="project-tech">
-                            <span class="skill-tag">"C++"</span>
-                            <span class="skill-tag">"Templates"</span>
-                            <span class="skill-tag">"Benchmarking"</span>
-                        </div>
-                        <div class="project-links mt-4" style="margin-top: 1.5rem;">
-                            <a href="#" class="project-link">"🔗 Live Demo"</a>
-                            <a href="#" class="project-link">"📁 Source Code"</a>
-                            <a href="#" class="project-link">"📖 Case Study"</a>
-                        </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">"2022 - 2023"</span>
+                        <h3 class="timeline-title">"Open Source Contributor"</h3>
+                        <div class="timeline-company">"Various Projects"</div>
+                        <p class="timeline-desc">"Contributed to open source systems and libraries. Built custom high-performance data structures in Rust and C++ for personal and academic projects."</p>
                     </div>
                 </div>
                 
-                <div class="project-card">
-                    <div class="project-cover" style="font-size: 4rem; text-align: center; padding: 3rem 0; background: var(--bg-card); border-bottom: 1px solid var(--border);">"🤖"</div>
-                    <div class="project-body">
-                        <div class="project-type">"AI/PROMPT"</div>
-                        <h3 class="project-title">"AI Content Extractor"</h3>
-                        <p class="project-desc">"Production LLM pipeline extracting structured data from 10K+ documents daily with 94% accuracy via schema-first prompting."</p>
-                        <div class="project-tech">
-                            <span class="skill-tag">"Python"</span>
-                            <span class="skill-tag">"OpenAI"</span>
-                            <span class="skill-tag">"PostgreSQL"</span>
-                        </div>
-                        <div class="project-links mt-4" style="margin-top: 1.5rem;">
-                            <a href="#" class="project-link">"🔗 Live Demo"</a>
-                            <a href="#" class="project-link">"📁 Source Code"</a>
-                            <a href="#" class="project-link">"📖 Case Study"</a>
-                        </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <span class="timeline-date">"2019 - 2023"</span>
+                        <h3 class="timeline-title">"B.S. Computer Science"</h3>
+                        <div class="timeline-company">"University Name"</div>
+                        <p class="timeline-desc">"Focused on Systems Programming, Database Architecture, and Distributed Systems. Graduated with Honors."</p>
                     </div>
                 </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 48px;">
-                <A href="/projects" class="btn btn-secondary">"View All Projects →"</A>
-            </div>
-        </section>
-
-        <section class="page-section container" style="margin-top: 80px;">
-            <div class="section-header">
-                <span class="section-label">"WRITING"</span>
-                <h2 class="section-title">"Latest Articles"</h2>
-                <p class="section-subtitle">"Deep dives into systems programming, database optimization, and AI prompt engineering."</p>
-            </div>
-            
-            <div style="display: flex; justify-content: center; padding: 4rem 0;">
-                <div class="spinner" style="width: 48px; height: 48px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent);"></div>
-            </div>
-        </section>
-
-        <section class="page-section container" style="margin-top: 120px; margin-bottom: 120px; text-align: center;">
-            <h1 class="hero-title" style="margin-bottom: 1.5rem; font-size: 3.5rem;">
-                "Let's Build Something "<span class="gradient-text">"Fast,"</span><br/>
-                <span class="gradient-text">"Safe & Smart"</span>
-            </h1>
-            <p class="hero-subtitle" style="margin: 0 auto 3rem auto; max-width: 600px;">
-                "Whether you need a systems engineer, a SQL optimizer, or an AI prompt architect — let's talk."
-            </p>
-            <div class="hero-actions" style="justify-content: center;">
-                <A href="/contact" class="btn btn-primary">"Start a Conversation"</A>
-                <A href="/about" class="btn btn-secondary">"Download Resume"</A>
             </div>
         </section>
     }
 }
 
 #[component]
+fn ContactForm() -> impl IntoView {
+    let (name, set_name) = create_signal(String::new());
+    let (email, set_email) = create_signal(String::new());
+    let (message, set_message) = create_signal(String::new());
+    let (status, set_status) = create_signal(Option::<bool>::None);
+    let (is_submitting, set_submitting) = create_signal(false);
+
+    let submit_form = create_action(move |(n, e, m): &(String, String, String)| {
+        let n = n.clone();
+        let e = e.clone();
+        let m = m.clone();
+        async move {
+            set_submitting.set(true);
+            let res = submit_contact_form(n, e, m).await;
+            set_submitting.set(false);
+            set_status.set(Some(res.is_ok()));
+            if res.is_ok() {
+                set_name.set(String::new());
+                set_email.set(String::new());
+                set_message.set(String::new());
+            }
+        }
+    });
+
+    view! {
+        <section class="page-section container">
+            <div class="section-header" style="text-align: center;">
+                <span class="section-label">"Get In Touch"</span>
+                <h2 class="section-title">"Ready to build something great?"</h2>
+                <p class="section-subtitle mx-auto">"Fill out the form below or email me directly. I'll get back to you within 24 hours."</p>
+            </div>
+            
+            <div class="contact-form-container">
+                <form on:submit=move |ev| {
+                    ev.prevent_default();
+                    submit_form.dispatch((name.get(), email.get(), message.get()));
+                }>
+                    <div class="form-field">
+                        <label for="name">"Name"</label>
+                        <input id="name" type="text" required
+                            prop:value=name
+                            on:input=move |ev| set_name.set(event_target_value(&ev)) />
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="email">"Email Address"</label>
+                        <input id="email" type="email" required
+                            prop:value=email
+                            on:input=move |ev| set_email.set(event_target_value(&ev)) />
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="message">"Message"</label>
+                        <textarea id="message" required
+                            prop:value=message
+                            on:input=move |ev| set_message.set(event_target_value(&ev))></textarea>
+                    </div>
+                    
+                    <button type="submit" class="form-submit-btn" disabled=move || is_submitting.get()>
+                        {move || if is_submitting.get() { "Sending..." } else { "Send Message" }}
+                    </button>
+                    
+                    {move || match status.get() {
+                        Some(true) => view! { <div class="form-feedback success">"Message sent successfully!"</div> }.into_view(),
+                        Some(false) => view! { <div class="form-feedback error">"Failed to send message. Please try again."</div> }.into_view(),
+                        None => view! {}.into_view(),
+                    }}
+                </form>
+            </div>
+        </section>
+    }
+}
+
+#[component]
+fn HomePage() -> impl IntoView {
+    view! {
+        <section class="hero page-section container animate-slide-up">
+            <div class="hero-content">
+                <span class="section-label" style="display: inline-block;">"Hi, my name is"</span>
+                <h1 class="hero-title">
+                    <span class="gradient-text">"Irshad Ali."</span>
+                </h1>
+                <h2 class="hero-subtitle" style="font-size: clamp(2rem, 5vw, 4rem); font-weight: 700; color: var(--text-secondary); margin-bottom: 2rem;">
+                    "I engineer reliable systems."
+                </h2>
+                <p class="hero-subtitle">
+                    "I am a software engineer specializing in backend development, systems programming, and AI pipelines. I focus on writing high-performance, safe, and scalable code."
+                </p>
+                <div class="hero-actions">
+                    <a href="#" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        "Download Resume"
+                    </a>
+                    <A href="/projects" class="btn btn-secondary">
+                        "View My Work"
+                    </A>
+                </div>
+            </div>
+        </section>
+        
+        <ExperienceTimeline />
+
+        <section class="page-section container" style="margin-top: 80px;">
+            <div class="section-header">
+                <span class="section-label">"Expertise"</span>
+                <h2 class="section-title">"Technical Skills"</h2>
+            </div>
+            
+            <div class="skills-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <div class="skill-category" style="background-color: var(--bg-card); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                    <h3 style="color: var(--text-primary); font-size: 1.25rem; margin-bottom: 1.5rem; font-weight: 600;">"Languages & Frameworks"</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-tertiary);">
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Rust (Leptos, Axum, Tokio)"</li>
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "C++ (C++20, STL, Boost)"</li>
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Python (FastAPI, PyTorch)"</li>
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "TypeScript & JavaScript"</li>
+                    </ul>
+                </div>
+                <div class="skill-category" style="background-color: var(--bg-card); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                    <h3 style="color: var(--text-primary); font-size: 1.25rem; margin-bottom: 1.5rem; font-weight: 600;">"Databases & Cloud"</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-tertiary);">
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "PostgreSQL & pgvector"</li>
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Redis & Memcached"</li>
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "AWS (EC2, S3, RDS)"</li>
+                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Docker & Linux Administration"</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <ContactForm />
+    }
+}
+
+#[component]
 fn AboutPage() -> impl IntoView {
     view! {
-        <div class="page-section animate-slide-up">
+        <div class="page-section container animate-slide-up">
             <h1 class="page-title">"About Me"</h1>
             <div class="content-prose">
                 <p class="mb-4">"I build high-performance distributed systems and web applications, predominantly using Rust."</p>
-                <p>"This site itself is built using Leptos, Axum, and Tailwind CSS."</p>
+                <p>"This site itself is built using Leptos, Axum, and custom Vanilla CSS."</p>
             </div>
         </div>
     }
