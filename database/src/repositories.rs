@@ -1,4 +1,4 @@
-use domain::models::{User, Article, Book, Project};
+use domain::models::{User, Article, Book, Project, TimelineItem, Skill};
 use sqlx::PgPool;
 
 
@@ -130,5 +130,61 @@ impl BookRepository {
         sqlx::query_as!(Book, "SELECT * FROM books ORDER BY created_at DESC")
             .fetch_all(&self.pool)
             .await
+    }
+}
+
+pub struct PortfolioRepository {
+    pool: PgPool,
+}
+
+impl PortfolioRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get_timeline_items(&self) -> Result<Vec<TimelineItem>, sqlx::Error> {
+        sqlx::query_as!(TimelineItem, "SELECT * FROM timeline_items ORDER BY order_index ASC")
+            .fetch_all(&self.pool)
+            .await
+    }
+
+    pub async fn add_timeline_item(&self, item_type: &str, title: &str, organization: &str, period: &str, description: &str, order_index: i32) -> Result<TimelineItem, sqlx::Error> {
+        sqlx::query_as!(
+            TimelineItem,
+            "INSERT INTO timeline_items (item_type, title, organization, period, description, order_index) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+            item_type, title, organization, period, description, order_index
+        )
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn delete_timeline_item(&self, id: uuid::Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query!("DELETE FROM timeline_items WHERE id = $1", id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn get_skills(&self) -> Result<Vec<Skill>, sqlx::Error> {
+        sqlx::query_as!(Skill, "SELECT * FROM skills ORDER BY category ASC, order_index ASC")
+            .fetch_all(&self.pool)
+            .await
+    }
+
+    pub async fn add_skill(&self, category: &str, name: &str, order_index: i32) -> Result<Skill, sqlx::Error> {
+        sqlx::query_as!(
+            Skill,
+            "INSERT INTO skills (category, name, order_index) VALUES ($1, $2, $3) RETURNING *",
+            category, name, order_index
+        )
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn delete_skill(&self, id: uuid::Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query!("DELETE FROM skills WHERE id = $1", id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }

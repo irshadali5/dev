@@ -68,6 +68,7 @@ pub fn App() -> impl IntoView {
                     <Route path="admin" view=AdminDashboard>
                         <Route path="" view=AdminOverview/>
                         <Route path="analytics" view=AdminAnalytics/>
+                        <Route path="portfolio" view=AdminPortfolio/>
                         <Route path="settings" view=AdminSettings/>
                     </Route>
                     <Route path="/*any" view=NotFound/>
@@ -155,6 +156,8 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn ExperienceTimeline() -> impl IntoView {
+    let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
+
     view! {
         <section class="page-section container" style="margin-top: 80px;">
             <div class="section-header">
@@ -163,32 +166,32 @@ fn ExperienceTimeline() -> impl IntoView {
             </div>
             
             <div class="timeline-container">
-                <div class="timeline-item">
-                    <div class="timeline-content">
-                        <span class="timeline-date">"2023 - Present"</span>
-                        <h3 class="timeline-title">"Recent Graduate / Junior Developer"</h3>
-                        <div class="timeline-company">"Available for Hire"</div>
-                        <p class="timeline-desc">"Actively seeking roles in Systems Engineering, Backend Development, or Full-Stack Engineering. Strong foundation in Rust, C++, and PostgreSQL."</p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item">
-                    <div class="timeline-content">
-                        <span class="timeline-date">"2022 - 2023"</span>
-                        <h3 class="timeline-title">"Open Source Contributor"</h3>
-                        <div class="timeline-company">"Various Projects"</div>
-                        <p class="timeline-desc">"Contributed to open source systems and libraries. Built custom high-performance data structures in Rust and C++ for personal and academic projects."</p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item">
-                    <div class="timeline-content">
-                        <span class="timeline-date">"2019 - 2023"</span>
-                        <h3 class="timeline-title">"B.S. Computer Science"</h3>
-                        <div class="timeline-company">"University Name"</div>
-                        <p class="timeline-desc">"Focused on Systems Programming, Database Architecture, and Distributed Systems. Graduated with Honors."</p>
-                    </div>
-                </div>
+                <Suspense fallback=move || view! { <div class="timeline-item"><div class="timeline-content">"Loading..."</div></div> }>
+                    {move || timeline_res.get().map(|items| {
+                        if items.is_empty() {
+                            view! {
+                                <div class="timeline-item">
+                                    <div class="timeline-content">
+                                        <p class="timeline-desc" style="text-align: center; font-style: italic;">"Timeline details are currently being updated."</p>
+                                    </div>
+                                </div>
+                            }.into_view()
+                        } else {
+                            items.into_iter().map(|item| {
+                                view! {
+                                    <div class="timeline-item">
+                                        <div class="timeline-content">
+                                            <span class="timeline-date">{item.period}</span>
+                                            <h3 class="timeline-title">{item.title}</h3>
+                                            <div class="timeline-company">{item.organization}</div>
+                                            <p class="timeline-desc">{item.description}</p>
+                                        </div>
+                                    </div>
+                                }
+                            }).collect_view()
+                        }
+                    })}
+                </Suspense>
             </div>
         </section>
     }
@@ -269,7 +272,9 @@ fn ContactForm() -> impl IntoView {
 }
 
 #[component]
-fn HomePage() -> impl IntoView {
+pub fn HomePage() -> impl IntoView {
+    let skills_res = create_resource(|| (), |_| async move { api::get_skills().await.unwrap_or_default() });
+
     view! {
         <section class="hero page-section container animate-slide-up">
             <div class="hero-content">
@@ -303,26 +308,48 @@ fn HomePage() -> impl IntoView {
                 <h2 class="section-title">"Technical Skills"</h2>
             </div>
             
-            <div class="skills-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                <div class="skill-category" style="background-color: var(--bg-card); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                    <h3 style="color: var(--text-primary); font-size: 1.25rem; margin-bottom: 1.5rem; font-weight: 600;">"Languages & Frameworks"</h3>
-                    <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-tertiary);">
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Rust (Leptos, Axum, Tokio)"</li>
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "C++ (C++20, STL, Boost)"</li>
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Python (FastAPI, PyTorch)"</li>
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "TypeScript & JavaScript"</li>
-                    </ul>
-                </div>
-                <div class="skill-category" style="background-color: var(--bg-card); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                    <h3 style="color: var(--text-primary); font-size: 1.25rem; margin-bottom: 1.5rem; font-weight: 600;">"Databases & Cloud"</h3>
-                    <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-tertiary);">
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "PostgreSQL & pgvector"</li>
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Redis & Memcached"</li>
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "AWS (EC2, S3, RDS)"</li>
-                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> "Docker & Linux Administration"</li>
-                    </ul>
-                </div>
-            </div>
+            <Suspense fallback=move || view! { <div class="skills-grid"><div class="skill-category">"Loading skills..."</div></div> }>
+                {move || skills_res.get().map(|skills| {
+                    if skills.is_empty() {
+                        view! {
+                            <div class="skills-grid">
+                                <div class="skill-category" style="background-color: var(--bg-card); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-align: center; color: var(--text-tertiary); font-style: italic;">
+                                    "Skills are currently being updated."
+                                </div>
+                            </div>
+                        }.into_view()
+                    } else {
+                        // Group by category manually since group_by is nightly only or itertools
+                        let mut categories: Vec<(String, Vec<domain::models::Skill>)> = Vec::new();
+                        for skill in skills {
+                            if let Some(pos) = categories.iter().position(|(c, _)| c == &skill.category) {
+                                categories[pos].1.push(skill);
+                            } else {
+                                categories.push((skill.category.clone(), vec![skill]));
+                            }
+                        }
+                        
+                        view! {
+                            <div class="skills-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                                {categories.into_iter().map(|(category, cat_skills)| {
+                                    view! {
+                                        <div class="skill-category" style="background-color: var(--bg-card); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                                            <h3 style="color: var(--text-primary); font-size: 1.25rem; margin-bottom: 1.5rem; font-weight: 600;">{category}</h3>
+                                            <ul style="list-style: none; padding: 0; margin: 0; color: var(--text-tertiary);">
+                                                {cat_skills.into_iter().map(|skill| {
+                                                    view! {
+                                                        <li style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;"><span>"▹"</span> {skill.name}</li>
+                                                    }
+                                                }).collect_view()}
+                                            </ul>
+                                        </div>
+                                    }
+                                }).collect_view()}
+                            </div>
+                        }.into_view()
+                    }
+                })}
+            </Suspense>
         </section>
 
         <ContactForm />
@@ -772,6 +799,7 @@ pub fn AdminDashboard() -> impl IntoView {
                     <ul class="admin-sidebar-menu">
                         <li><A href="/admin" exact=true class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Overview"</A></li>
                         <li><A href="/admin/analytics" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Analytics"</A></li>
+                        <li><A href="/admin/portfolio" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Portfolio"</A></li>
                         <li><A href="/admin/settings" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Settings"</A></li>
                     </ul>
                 </nav>
@@ -916,6 +944,150 @@ pub fn AdminSettings() -> impl IntoView {
                         }
                     })
                 }}
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn AdminPortfolio() -> impl IntoView {
+    let timeline_action = create_server_action::<api::AddTimelineItem>();
+    let delete_timeline_action = create_server_action::<api::DeleteTimelineItem>();
+    
+    let skills_action = create_server_action::<api::AddSkill>();
+    let delete_skill_action = create_server_action::<api::DeleteSkill>();
+
+    let timeline_res = create_resource(
+        move || (timeline_action.version().get(), delete_timeline_action.version().get()),
+        |_| async move { api::get_timeline().await.unwrap_or_default() }
+    );
+    
+    let skills_res = create_resource(
+        move || (skills_action.version().get(), delete_skill_action.version().get()),
+        |_| async move { api::get_skills().await.unwrap_or_default() }
+    );
+
+    view! {
+        <div class="animate-in fade-in">
+            <h1 class="admin-page-title">"Portfolio Management"</h1>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Add Timeline Item (Experience/Education)"</h2>
+                <ActionForm action=timeline_action class="auth-form">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Type"</label>
+                        <select name="item_type" class="form-input">
+                            <option value="experience">"Experience"</option>
+                            <option value="education">"Education"</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Title (e.g. Junior Developer)"</label>
+                        <input type="text" name="title" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Organization (e.g. Company Name)"</label>
+                        <input type="text" name="organization" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Period (e.g. 2023 - Present)"</label>
+                        <input type="text" name="period" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Description"</label>
+                        <textarea name="description" class="form-input" required=true></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Order Index (lower is first)"</label>
+                        <input type="number" name="order_index" class="form-input" value="0"/>
+                    </div>
+                    <button type="submit" class="glass-button btn-primary">"Add Timeline Item"</button>
+                </ActionForm>
+            </div>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Existing Timeline Items"</h2>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <tr class="table-header-row">
+                            <th class="table-th">"Type"</th>
+                            <th class="table-th">"Title"</th>
+                            <th class="table-th">"Org"</th>
+                            <th class="table-th">"Actions"</th>
+                        </tr>
+                        <Suspense fallback=move || view! { <tr><td colspan="4">"Loading..."</td></tr> }>
+                            {move || timeline_res.get().map(|items| {
+                                items.into_iter().map(|item| {
+                                    let id = item.id.to_string();
+                                    view! {
+                                        <tr class="table-row">
+                                            <td class="table-td">{item.item_type}</td>
+                                            <td class="table-td">{item.title}</td>
+                                            <td class="table-td">{item.organization}</td>
+                                            <td class="table-td">
+                                                <ActionForm action=delete_timeline_action>
+                                                    <input type="hidden" name="id" value=id/>
+                                                    <button type="submit" class="text-link" style="color: #ff5555;">"Delete"</button>
+                                                </ActionForm>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect_view()
+                            })}
+                        </Suspense>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Add Skill"</h2>
+                <ActionForm action=skills_action class="auth-form">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Category (e.g. Languages & Frameworks)"</label>
+                        <input type="text" name="category" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Skill Name (e.g. Rust)"</label>
+                        <input type="text" name="name" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Order Index"</label>
+                        <input type="number" name="order_index" class="form-input" value="0"/>
+                    </div>
+                    <button type="submit" class="glass-button btn-primary">"Add Skill"</button>
+                </ActionForm>
+            </div>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Existing Skills"</h2>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <tr class="table-header-row">
+                            <th class="table-th">"Category"</th>
+                            <th class="table-th">"Name"</th>
+                            <th class="table-th">"Actions"</th>
+                        </tr>
+                        <Suspense fallback=move || view! { <tr><td colspan="3">"Loading..."</td></tr> }>
+                            {move || skills_res.get().map(|items| {
+                                items.into_iter().map(|item| {
+                                    let id = item.id.to_string();
+                                    view! {
+                                        <tr class="table-row">
+                                            <td class="table-td">{item.category}</td>
+                                            <td class="table-td">{item.name}</td>
+                                            <td class="table-td">
+                                                <ActionForm action=delete_skill_action>
+                                                    <input type="hidden" name="id" value=id/>
+                                                    <button type="submit" class="text-link" style="color: #ff5555;">"Delete"</button>
+                                                </ActionForm>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect_view()
+                            })}
+                        </Suspense>
+                    </table>
+                </div>
             </div>
         </div>
     }
