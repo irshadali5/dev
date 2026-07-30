@@ -80,6 +80,39 @@ impl ArticleRepository {
             tags: vec![],
         }))
     }
+
+    pub async fn add_article(&self, slug: &str, title: &str, description: &str, body: &str, published: bool, author_id: uuid::Uuid) -> Result<Article, sqlx::Error> {
+        let r = sqlx::query!(
+            r#"
+            INSERT INTO articles (slug, title, description, body, published, author_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, slug, title, description, body, published, author_id, created_at, updated_at
+            "#,
+            slug, title, description, body, published, author_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        
+        Ok(Article {
+            id: r.id,
+            slug: r.slug,
+            title: r.title,
+            description: r.description,
+            body: r.body,
+            published: r.published,
+            author_id: r.author_id,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+            tags: vec![],
+        })
+    }
+
+    pub async fn delete_article(&self, id: uuid::Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query!("DELETE FROM articles WHERE id = $1", id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
 }
 
 pub struct ProjectRepository {
@@ -115,6 +148,39 @@ impl ProjectRepository {
             tags: vec![],
         }).collect())
     }
+
+    pub async fn add_project(&self, slug: &str, title: &str, description: &str, content_html: &str, github_url: Option<String>, live_url: Option<String>) -> Result<Project, sqlx::Error> {
+        let r = sqlx::query!(
+            r#"
+            INSERT INTO projects (slug, title, description, content_html, github_url, live_url)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, slug, title, description, content_html, github_url, live_url, created_at, updated_at
+            "#,
+            slug, title, description, content_html, github_url, live_url
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(Project {
+            id: r.id,
+            slug: r.slug,
+            title: r.title,
+            description: r.description,
+            content_html: r.content_html,
+            github_url: r.github_url,
+            live_url: r.live_url,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+            tags: vec![],
+        })
+    }
+
+    pub async fn delete_project(&self, id: uuid::Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query!("DELETE FROM projects WHERE id = $1", id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
 }
 
 pub struct BookRepository {
@@ -130,6 +196,23 @@ impl BookRepository {
         sqlx::query_as!(Book, "SELECT * FROM books ORDER BY created_at DESC")
             .fetch_all(&self.pool)
             .await
+    }
+
+    pub async fn add_book(&self, slug: &str, title: &str, description: Option<String>, author_id: uuid::Uuid) -> Result<Book, sqlx::Error> {
+        sqlx::query_as!(
+            Book,
+            "INSERT INTO books (slug, title, description, author_id) VALUES ($1, $2, $3, $4) RETURNING *",
+            slug, title, description, author_id
+        )
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn delete_book(&self, id: uuid::Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query!("DELETE FROM books WHERE id = $1", id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }
 

@@ -393,3 +393,115 @@ pub async fn delete_skill(id: String) -> Result<(), ServerFnError> {
         unreachable!()
     }
 }
+
+#[server(AddProject, "/api")]
+pub async fn add_project(slug: String, title: String, description: String, content_html: String, github_url: Option<String>, live_url: Option<String>) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        verify_admin().await?;
+        use database::repositories::ProjectRepository;
+        let pool = expect_context::<sqlx::PgPool>();
+        let repo = ProjectRepository::new(pool);
+        repo.add_project(&slug, &title, &description, &content_html, github_url, live_url)
+            .await.map_err(|e| ServerFnError::new(e.to_string()))?;
+        Ok(())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(DeleteProject, "/api")]
+pub async fn delete_project(id: String) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        verify_admin().await?;
+        use database::repositories::ProjectRepository;
+        let pool = expect_context::<sqlx::PgPool>();
+        let repo = ProjectRepository::new(pool);
+        let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
+        repo.delete_project(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;
+        Ok(())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(AddArticle, "/api")]
+pub async fn add_article(slug: String, title: String, description: String, body: String, published: bool) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        verify_admin().await?;
+        use database::repositories::ArticleRepository;
+        let pool = expect_context::<sqlx::PgPool>();
+        let repo = ArticleRepository::new(pool.clone());
+        // Default author_id for now or fetch from token. We will use a dummy uuid or fetch the admin uuid.
+        // Assuming admin is the only author. We need the auth_id. For now, use uuid::Uuid::nil() or parse from claims.
+        let author_id = sqlx::query!("SELECT id FROM users LIMIT 1").fetch_one(&pool).await.map(|r| r.id).map_err(|e| ServerFnError::new(e.to_string()))?; 
+        repo.add_article(&slug, &title, &description, &body, published, author_id)
+            .await.map_err(|e| ServerFnError::new(e.to_string()))?;
+        Ok(())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(DeleteArticle, "/api")]
+pub async fn delete_article(id: String) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        verify_admin().await?;
+        use database::repositories::ArticleRepository;
+        let pool = expect_context::<sqlx::PgPool>();
+        let repo = ArticleRepository::new(pool);
+        let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
+        repo.delete_article(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;
+        Ok(())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(AddBook, "/api")]
+pub async fn add_book(slug: String, title: String, description: Option<String>) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        verify_admin().await?;
+        use database::repositories::BookRepository;
+        let pool = expect_context::<sqlx::PgPool>();
+        let repo = BookRepository::new(pool.clone());
+        let author_id = sqlx::query!("SELECT id FROM users LIMIT 1").fetch_one(&pool).await.map(|r| r.id).map_err(|e| ServerFnError::new(e.to_string()))?;
+        repo.add_book(&slug, &title, description, author_id)
+            .await.map_err(|e| ServerFnError::new(e.to_string()))?;
+        Ok(())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(DeleteBook, "/api")]
+pub async fn delete_book(id: String) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        verify_admin().await?;
+        use database::repositories::BookRepository;
+        let pool = expect_context::<sqlx::PgPool>();
+        let repo = BookRepository::new(pool);
+        let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
+        repo.delete_book(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;
+        Ok(())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}

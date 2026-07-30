@@ -69,6 +69,9 @@ pub fn App() -> impl IntoView {
                         <Route path="" view=AdminOverview/>
                         <Route path="analytics" view=AdminAnalytics/>
                         <Route path="portfolio" view=AdminPortfolio/>
+                        <Route path="projects" view=AdminProjects/>
+                        <Route path="articles" view=AdminArticles/>
+                        <Route path="books" view=AdminBooks/>
                         <Route path="settings" view=AdminSettings/>
                     </Route>
                     <Route path="/*any" view=NotFound/>
@@ -155,29 +158,33 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-fn ExperienceTimeline() -> impl IntoView {
-    let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
-
+fn TimelineSection(
+    label: &'static str,
+    title: &'static str,
+    item_type_filter: &'static str,
+    timeline_res: leptos::Resource<(), Vec<domain::models::TimelineItem>>,
+) -> impl IntoView {
     view! {
         <section class="page-section container" style="margin-top: 80px;">
             <div class="section-header">
-                <span class="section-label">"Background"</span>
-                <h2 class="section-title">"Experience & Education"</h2>
+                <span class="section-label">{label}</span>
+                <h2 class="section-title">{title}</h2>
             </div>
             
             <div class="timeline-container">
                 <Suspense fallback=move || view! { <div class="timeline-item"><div class="timeline-content">"Loading..."</div></div> }>
                     {move || timeline_res.get().map(|items| {
-                        if items.is_empty() {
+                        let filtered: Vec<_> = items.into_iter().filter(|i| i.item_type == item_type_filter).collect();
+                        if filtered.is_empty() {
                             view! {
                                 <div class="timeline-item">
                                     <div class="timeline-content">
-                                        <p class="timeline-desc" style="text-align: center; font-style: italic;">"Timeline details are currently being updated."</p>
+                                        <p class="timeline-desc" style="text-align: center; font-style: italic;">"Details are currently being updated."</p>
                                     </div>
                                 </div>
                             }.into_view()
                         } else {
-                            items.into_iter().map(|item| {
+                            filtered.into_iter().map(|item| {
                                 view! {
                                     <div class="timeline-item">
                                         <div class="timeline-content">
@@ -272,36 +279,10 @@ fn ContactForm() -> impl IntoView {
 }
 
 #[component]
-pub fn HomePage() -> impl IntoView {
+fn SkillsSection() -> impl IntoView {
     let skills_res = create_resource(|| (), |_| async move { api::get_skills().await.unwrap_or_default() });
 
     view! {
-        <section class="hero page-section container animate-slide-up">
-            <div class="hero-content">
-                <span class="section-label" style="display: inline-block;">"Hi, my name is"</span>
-                <h1 class="hero-title">
-                    <span class="gradient-text">"Irshad Ali."</span>
-                </h1>
-                <h2 class="hero-subtitle" style="font-size: clamp(2rem, 5vw, 4rem); font-weight: 700; color: var(--text-secondary); margin-bottom: 2rem;">
-                    "I engineer reliable systems."
-                </h2>
-                <p class="hero-subtitle">
-                    "I am a software engineer specializing in backend development, systems programming, and AI pipelines. I focus on writing high-performance, safe, and scalable code."
-                </p>
-                <div class="hero-actions">
-                    <a href="#" class="btn btn-primary">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        "Download Resume"
-                    </a>
-                    <A href="/projects" class="btn btn-secondary">
-                        "View My Work"
-                    </A>
-                </div>
-            </div>
-        </section>
-        
-        <ExperienceTimeline />
-
         <section class="page-section container" style="margin-top: 80px;">
             <div class="section-header">
                 <span class="section-label">"Expertise"</span>
@@ -319,7 +300,6 @@ pub fn HomePage() -> impl IntoView {
                             </div>
                         }.into_view()
                     } else {
-                        // Group by category manually since group_by is nightly only or itertools
                         let mut categories: Vec<(String, Vec<domain::models::Skill>)> = Vec::new();
                         for skill in skills {
                             if let Some(pos) = categories.iter().position(|(c, _)| c == &skill.category) {
@@ -351,6 +331,44 @@ pub fn HomePage() -> impl IntoView {
                 })}
             </Suspense>
         </section>
+    }
+}
+
+
+#[component]
+pub fn HomePage() -> impl IntoView {
+    let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
+
+
+    view! {
+        <section class="hero page-section container animate-slide-up">
+            <div class="hero-content">
+                <span class="section-label" style="display: inline-block;">"Hi, my name is"</span>
+                <h1 class="hero-title">
+                    <span class="gradient-text">"Irshad Ali."</span>
+                </h1>
+                <h2 class="hero-subtitle" style="font-size: clamp(2rem, 5vw, 4rem); font-weight: 700; color: var(--text-secondary); margin-bottom: 2rem;">
+                    "I engineer reliable systems."
+                </h2>
+                <p class="hero-subtitle">
+                    "I am a software engineer specializing in backend development, systems programming, and AI pipelines. I focus on writing high-performance, safe, and scalable code."
+                </p>
+                <div class="hero-actions">
+                    <a href="#" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        "Download Resume"
+                    </a>
+                    <A href="/projects" class="btn btn-secondary">
+                        "View My Work"
+                    </A>
+                </div>
+            </div>
+        </section>
+        
+        <SkillsSection />
+        <TimelineSection label="Background" title="Experience" item_type_filter="experience" timeline_res=timeline_res />
+        <TimelineSection label="Achievements" title="Certifications & Courses" item_type_filter="certification" timeline_res=timeline_res />
+        <TimelineSection label="Background" title="Education" item_type_filter="education" timeline_res=timeline_res />
 
         <ContactForm />
     }
@@ -800,6 +818,9 @@ pub fn AdminDashboard() -> impl IntoView {
                         <li><A href="/admin" exact=true class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Overview"</A></li>
                         <li><A href="/admin/analytics" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Analytics"</A></li>
                         <li><A href="/admin/portfolio" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Portfolio"</A></li>
+                        <li><A href="/admin/projects" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Projects"</A></li>
+                        <li><A href="/admin/articles" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Articles"</A></li>
+                        <li><A href="/admin/books" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Books"</A></li>
                         <li><A href="/admin/settings" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Settings"</A></li>
                     </ul>
                 </nav>
@@ -972,12 +993,13 @@ pub fn AdminPortfolio() -> impl IntoView {
             <h1 class="admin-page-title">"Portfolio Management"</h1>
             
             <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
-                <h2 class="admin-card-title">"Add Timeline Item (Experience/Education)"</h2>
+                <h2 class="admin-card-title">"Add Timeline Item (Experience/Education/Certification)"</h2>
                 <ActionForm action=timeline_action class="auth-form">
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">"Type"</label>
                         <select name="item_type" class="form-input">
                             <option value="experience">"Experience"</option>
+                            <option value="certification">"Certification / Course"</option>
                             <option value="education">"Education"</option>
                         </select>
                     </div>
@@ -1077,6 +1099,232 @@ pub fn AdminPortfolio() -> impl IntoView {
                                             <td class="table-td">{item.name}</td>
                                             <td class="table-td">
                                                 <ActionForm action=delete_skill_action>
+                                                    <input type="hidden" name="id" value=id/>
+                                                    <button type="submit" class="text-link" style="color: #ff5555;">"Delete"</button>
+                                                </ActionForm>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect_view()
+                            })}
+                        </Suspense>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn AdminProjects() -> impl IntoView {
+    let add_action = create_server_action::<api::AddProject>();
+    let delete_action = create_server_action::<api::DeleteProject>();
+
+    let projects_res = create_resource(
+        move || (add_action.version().get(), delete_action.version().get()),
+        |_| async move { api::get_projects().await.unwrap_or_default() }
+    );
+
+    view! {
+        <div class="animate-in fade-in">
+            <h1 class="admin-page-title">"Projects Management"</h1>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Add Project"</h2>
+                <ActionForm action=add_action class="auth-form">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Slug"</label>
+                        <input type="text" name="slug" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Title"</label>
+                        <input type="text" name="title" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Description"</label>
+                        <textarea name="description" class="form-input" required=true></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Content HTML"</label>
+                        <textarea name="content_html" class="form-input" required=true></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"GitHub URL"</label>
+                        <input type="text" name="github_url" class="form-input"/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Live URL"</label>
+                        <input type="text" name="live_url" class="form-input"/>
+                    </div>
+                    <button type="submit" class="glass-button btn-primary">"Add Project"</button>
+                </ActionForm>
+            </div>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Existing Projects"</h2>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <tr class="table-header-row">
+                            <th class="table-th">"Title"</th>
+                            <th class="table-th">"Slug"</th>
+                            <th class="table-th">"Actions"</th>
+                        </tr>
+                        <Suspense fallback=move || view! { <tr><td colspan="3">"Loading..."</td></tr> }>
+                            {move || projects_res.get().map(|items| {
+                                items.into_iter().map(|item| {
+                                    let id = item.id.to_string();
+                                    view! {
+                                        <tr class="table-row">
+                                            <td class="table-td">{item.title}</td>
+                                            <td class="table-td">{item.slug}</td>
+                                            <td class="table-td">
+                                                <ActionForm action=delete_action>
+                                                    <input type="hidden" name="id" value=id/>
+                                                    <button type="submit" class="text-link" style="color: #ff5555;">"Delete"</button>
+                                                </ActionForm>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect_view()
+                            })}
+                        </Suspense>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn AdminArticles() -> impl IntoView {
+    let add_action = create_server_action::<api::AddArticle>();
+    let delete_action = create_server_action::<api::DeleteArticle>();
+
+    let articles_res = create_resource(
+        move || (add_action.version().get(), delete_action.version().get()),
+        |_| async move { api::get_articles().await.unwrap_or_default() }
+    );
+
+    view! {
+        <div class="animate-in fade-in">
+            <h1 class="admin-page-title">"Articles Management"</h1>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Add Article"</h2>
+                <ActionForm action=add_action class="auth-form">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Slug"</label>
+                        <input type="text" name="slug" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Title"</label>
+                        <input type="text" name="title" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Description"</label>
+                        <textarea name="description" class="form-input" required=true></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Body"</label>
+                        <textarea name="body" class="form-input" required=true></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Published (true/false)"</label>
+                        <input type="text" name="published" class="form-input" value="true" required=true/>
+                    </div>
+                    <button type="submit" class="glass-button btn-primary">"Add Article"</button>
+                </ActionForm>
+            </div>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Existing Articles"</h2>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <tr class="table-header-row">
+                            <th class="table-th">"Title"</th>
+                            <th class="table-th">"Slug"</th>
+                            <th class="table-th">"Published"</th>
+                            <th class="table-th">"Actions"</th>
+                        </tr>
+                        <Suspense fallback=move || view! { <tr><td colspan="4">"Loading..."</td></tr> }>
+                            {move || articles_res.get().map(|items| {
+                                items.into_iter().map(|item| {
+                                    let id = item.id.to_string();
+                                    view! {
+                                        <tr class="table-row">
+                                            <td class="table-td">{item.title}</td>
+                                            <td class="table-td">{item.slug}</td>
+                                            <td class="table-td">{if item.published { "Yes" } else { "No" }}</td>
+                                            <td class="table-td">
+                                                <ActionForm action=delete_action>
+                                                    <input type="hidden" name="id" value=id/>
+                                                    <button type="submit" class="text-link" style="color: #ff5555;">"Delete"</button>
+                                                </ActionForm>
+                                            </td>
+                                        </tr>
+                                    }
+                                }).collect_view()
+                            })}
+                        </Suspense>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn AdminBooks() -> impl IntoView {
+    let add_action = create_server_action::<api::AddBook>();
+    let delete_action = create_server_action::<api::DeleteBook>();
+
+    let books_res = create_resource(
+        move || (add_action.version().get(), delete_action.version().get()),
+        |_| async move { api::get_books().await.unwrap_or_default() }
+    );
+
+    view! {
+        <div class="animate-in fade-in">
+            <h1 class="admin-page-title">"Books Management"</h1>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Add Book"</h2>
+                <ActionForm action=add_action class="auth-form">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Slug"</label>
+                        <input type="text" name="slug" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Title"</label>
+                        <input type="text" name="title" class="form-input" required=true/>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">"Description"</label>
+                        <textarea name="description" class="form-input"></textarea>
+                    </div>
+                    <button type="submit" class="glass-button btn-primary">"Add Book"</button>
+                </ActionForm>
+            </div>
+            
+            <div class="admin-card glass-panel mb-6" style="margin-bottom: 2rem;">
+                <h2 class="admin-card-title">"Existing Books"</h2>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <tr class="table-header-row">
+                            <th class="table-th">"Title"</th>
+                            <th class="table-th">"Slug"</th>
+                            <th class="table-th">"Actions"</th>
+                        </tr>
+                        <Suspense fallback=move || view! { <tr><td colspan="3">"Loading..."</td></tr> }>
+                            {move || books_res.get().map(|items| {
+                                items.into_iter().map(|item| {
+                                    let id = item.id.to_string();
+                                    view! {
+                                        <tr class="table-row">
+                                            <td class="table-td">{item.title}</td>
+                                            <td class="table-td">{item.slug}</td>
+                                            <td class="table-td">
+                                                <ActionForm action=delete_action>
                                                     <input type="hidden" name="id" value=id/>
                                                     <button type="submit" class="text-link" style="color: #ff5555;">"Delete"</button>
                                                 </ActionForm>
