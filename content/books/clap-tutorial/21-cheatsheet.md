@@ -3,11 +3,9 @@ title: "Cheatsheet"
 description: ""
 ---
 
-cheatsheet">
 
-<div class="section-eyebrow">
 
-Reference** >
+Reference
 
 ## Cheatsheet
 

@@ -3,7 +3,6 @@ title: "anyhow — Rust error handling made easy"
 description: ""
 ---
 
-intro" class="section active">
 
 <div class="hero-bar">
 
@@ -19,12 +18,12 @@ A complete guide from zero to production-ready error handling
 
 If you've hit Rust's error handling and felt confused by the jungle of
 `Box<dyn Error>`, `impl
-Error`, and custom enums — **anyhow** > is the crate that
+Error`, and custom enums — **anyhow is the crate that
 clears all of that up for application code.
 
 
 
-> [!NOTE] > **What is anyhow?** > A crate by David Tolnay that
+> [!NOTE] > **What is anyhow? A crate by David Tolnay that
 gives you a single `anyhow::Error` type that can
 hold *any* error, plus helpers to add human-readable context as errors
 bubble up. Zero boilerplate.

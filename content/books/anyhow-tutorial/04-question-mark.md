@@ -3,7 +3,6 @@ title: "The ? operator"
 description: ""
 ---
 
-question-mark" class="section">
 
 <div class="breadcrumb">
 
@@ -73,40 +72,5 @@ fn read_number(path: &str) -> Result<u32> {
 
 ## Multiple error types — where anyhow shines
 
-<div class="code-header">
 
 <span class="code-lang">rust`
-
-copy
-
-
-
-``` rust
-use anyhow::Result;
-use std::fs;
-
-fn load_and_parse(path: &str) -> Result<Vec<String>> {
-    // io::Error — automatically converted by ?
-    let content = fs::read_to_string(path)?;
-
-    // serde_json::Error — also automatically converted by ?
-    let items: Vec<String> = serde_json::from_str(&content)?;
-
-    Ok(items)
-}
-
-// Both io::Error and serde_json::Error convert to anyhow::Error
-// via the ? operator. No From impls needed. No enum variants needed.
-```
-
-
-
-> [!NOTE] > **Mental model** > Think of
-`anyhow::Error` as a "type-erased box" that can
-hold any error. The `?` operator puts errors
-into that box automatically. Later you can open the box to inspect the
-specific error type (see Downcasting).
-
-
-
-Next: Adding context →

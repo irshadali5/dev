@@ -57,6 +57,19 @@ pub struct Book {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BookMeta {
+    pub slug: String,
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub description: String,
+    pub author: String,
+    pub published: bool,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub chapters: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimelineItem {
     pub id: Uuid,
     pub item_type: String,

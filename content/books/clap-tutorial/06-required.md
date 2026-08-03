@@ -3,11 +3,8 @@ title: "Required &amp; Optional Arguments"
 description: ""
 ---
 
-required">
 
-<div class="section-eyebrow">
 
-Chapter 7** >
 
 ## Required & Optional Arguments
 
@@ -20,38 +17,31 @@ The type of your field determines whether the argument is required:
 | `bool` (flag)         | Optional — `false` if not provided |
 | Has `default_value`   | Optional — uses default            |
 
-<div class="code-block">
 
-<div class="code-header">
 
-<span class="code-lang">rust</span>
+```rust
 
-copy
+#[derive(Parser)]
+struct Cli {
+    /// Required: must be provided
+    name: String,
 
-** >
+    /// Optional: fine to omit
+    #[arg(short, long)]
+    nickname: Option<String>,
 
-    #[derive(Parser)]
-    struct Cli {
-        /// Required: must be provided
-        name: String,
+    /// Optional with default
+    #[arg(short, long, default_value_t = 42)]
+    count: u32,
+}
 
-        /// Optional: fine to omit
-        #[arg(short, long)]
-        nickname: Option<String>,
-
-        /// Optional with default
-        #[arg(short, long, default_value_t = 42)]
-        count: u32,
-    }
-
-** >
+```
 
 
 
-> [!TIP] > **Making an option required** >
+> [!TIP] > **Making an option required
 
 You can force a named option to be required even if you'd normally use
 `Option<T>`: add `#[arg(required = true)]`. But usually just use `T`
 (non-option) instead.
 
-** >

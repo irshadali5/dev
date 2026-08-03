@@ -3,11 +3,8 @@ title: "Parsing into Rust Types"
 description: ""
 ---
 
-types">
 
-<div class="section-eyebrow">
 
-Chapter 6** >
 
 ## Parsing into Rust Types
 
@@ -24,42 +21,35 @@ types, it Just Works™ because they implement `FromStr`.
 | `Vec<T>` | `--tag a --tag b` | Multiple values |
 | Custom enum (ValueEnum) | `--format json` | Covered in ValueEnum section |
 
-<div class="code-block">
 
-<div class="code-header">
 
-<span class="code-lang">rust</span>
+```rust
 
-copy
+use std::net::IpAddr;
+use std::path::PathBuf;
 
-** >
+#[derive(Parser, Debug)]
+struct Cli {
+    /// Port to listen on
+    #[arg(short, long, default_value_t = 3000)]
+    port: u16,
 
-    use std::net::IpAddr;
-    use std::path::PathBuf;
+    /// Bind address
+    #[arg(long, default_value = "127.0.0.1")]
+    host: IpAddr,
 
-    #[derive(Parser, Debug)]
-    struct Cli {
-        /// Port to listen on
-        #[arg(short, long, default_value_t = 3000)]
-        port: u16,
+    /// Config file path
+    #[arg(short, long)]
+    config: Option<PathBuf>,
+}
 
-        /// Bind address
-        #[arg(long, default_value = "127.0.0.1")]
-        host: IpAddr,
-
-        /// Config file path
-        #[arg(short, long)]
-        config: Option<PathBuf>,
-    }
-
-** >
+```
 
 
 
-> [!WARNING] > **default_value_t vs default_value** >
+> [!WARNING] > **default_value_t vs default_value
 
 Use `default_value_t = 3000` when your type is not a string (u16, bool,
 etc.). Use `default_value = "text"` for strings. Mixing them causes
 compile errors.
 
-** >

@@ -3,7 +3,6 @@ title: "API cheatsheet"
 description: ""
 ---
 
-api-ref" class="section">
 
 <div class="breadcrumb">
 
@@ -37,37 +36,5 @@ Reference › API cheatsheet
 
 ## Imports quick-reference
 
-<div class="code-header">
 
 <span class="code-lang">rust`
-
-copy
-
-
-
-``` rust
-// Covers 80% of use cases
-use anyhow::Result;
-
-// Add Context for .context() and .with_context()
-use anyhow::{Context, Result};
-
-// Full import
-use anyhow::{Context, Result, Error, anyhow, bail, ensure};
-```
-
-## Format strings
-
-| Format  | Output                                              |
-|---------|-----------------------------------------------------|
-| "{}"    | Just the top-level message                          |
-| "{:#}"  | Full chain, colon-separated, single line            |
-| "{:?}"  | Full chain, multi-line, with backtrace if available |
-| "{:#?}" | Pretty-printed debug, good for logging              |
-
-
-
-> [!TIP] > **Done!** > You now know everything you need to use
-anyhow in real Rust projects. The most important things: always add
-.context(), know when NOT to use it in libraries, and combine with
-thiserror for domain errors.

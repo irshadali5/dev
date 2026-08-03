@@ -1,4 +1,25 @@
 (
+    slug: "anyhow-tutorial",
     title: "anyhow — Rust error handling made easy",
-    description: "A complete guide from zero to production-ready error handling",
+    subtitle: None,
+    description: "A comprehensive guide to using anyhow and thiserror for robust error handling in Rust applications.",
+    author: "Irshad Ali",
+    published: true,
+    tags: ["Rust", "Error Handling", "anyhow"],
+    created_at: "2026-06-01",
+    chapters: [
+        "00-intro.md",
+        "01-setup.md",
+        "02-first-error.md",
+        "03-result-type.md",
+        "04-question-mark.md",
+        "05-context.md",
+        "06-downcasting.md",
+        "07-custom-errors.md",
+        "08-chaining.md",
+        "09-thiserror.md",
+        "10-libs-vs-bins.md",
+        "11-patterns.md",
+        "12-api-ref.md"
+    ]
 )

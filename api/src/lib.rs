@@ -77,6 +77,64 @@ pub async fn get_books() -> Result<Vec<Book>, ServerFnError> {
     }
 }
 
+#[server(GetBookManifest, "/api")]
+pub async fn get_book_manifest(slug: String) -> Result<domain::models::BookMeta, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let file_path = std::path::PathBuf::from(format!("content/books/{}/book.ron", slug));
+        if !file_path.exists() {
+            return Err(ServerFnError::new("Book manifest not found"));
+        }
+        let ron_content = std::fs::read_to_string(file_path).map_err(|e| ServerFnError::new(e.to_string()))?;
+        let metadata: domain::models::BookMeta = ron::de::from_str(&ron_content).map_err(|e| ServerFnError::new(e.to_string()))?;
+        Ok(metadata)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(GetBookChapter, "/api")]
+pub async fn get_book_chapter(book_slug: String, chapter_file: String) -> Result<String, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let file_path = std::path::PathBuf::from(format!("content/books/{}/{}", book_slug, chapter_file));
+        if !file_path.exists() {
+            return Err(ServerFnError::new("Chapter not found"));
+        }
+        let md_content = std::fs::read_to_string(file_path).map_err(|e| ServerFnError::new(e.to_string()))?;
+        
+        // Strip frontmatter
+        let content = if md_content.starts_with("---") {
+            if let Some(end_idx) = md_content[3..].find("---") {
+                &md_content[3 + end_idx + 3..]
+            } else {
+                &md_content
+            }
+        } else {
+            &md_content
+        };
+
+        let mut options = pulldown_cmark::Options::empty();
+        options.insert(pulldown_cmark::Options::ENABLE_TABLES);
+        options.insert(pulldown_cmark::Options::ENABLE_FOOTNOTES);
+        options.insert(pulldown_cmark::Options::ENABLE_STRIKETHROUGH);
+        options.insert(pulldown_cmark::Options::ENABLE_TASKLISTS);
+        options.insert(pulldown_cmark::Options::ENABLE_HEADING_ATTRIBUTES);
+
+        let parser = pulldown_cmark::Parser::new_ext(content.trim(), options);
+        let mut html_output = String::new();
+        pulldown_cmark::html::push_html(&mut html_output, parser);
+
+        Ok(html_output)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
 #[server(GetArticles, "/api")]
 pub async fn get_articles() -> Result<Vec<Article>, ServerFnError> {
     #[cfg(feature = "ssr")]
@@ -440,7 +498,8 @@ pub async fn add_article(slug: String, title: String, description: String, body:
         let repo = ArticleRepository::new(pool.clone());
         // Default author_id for now or fetch from token. We will use a dummy uuid or fetch the admin uuid.
         // Assuming admin is the only author. We need the auth_id. For now, use uuid::Uuid::nil() or parse from claims.
-        let author_id = sqlx::query!("SELECT id FROM users LIMIT 1").fetch_one(&pool).await.map(|r| r.id).map_err(|e| ServerFnError::new(e.to_string()))?; 
+        let author_id_str = sqlx::query!("SELECT id FROM users LIMIT 1").fetch_one(&pool).await.map(|r| r.id).map_err(|e| ServerFnError::new(e.to_string()))?; 
+        let author_id = uuid::Uuid::parse_str(&author_id_str.unwrap_or_default()).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.add_article(&slug, &title, &description, &body, published, author_id)
             .await.map_err(|e| ServerFnError::new(e.to_string()))?;
         Ok(())
@@ -477,7 +536,8 @@ pub async fn add_book(slug: String, title: String, description: Option<String>) 
         use database::repositories::BookRepository;
         let pool = expect_context::<sqlx::SqlitePool>();
         let repo = BookRepository::new(pool.clone());
-        let author_id = sqlx::query!("SELECT id FROM users LIMIT 1").fetch_one(&pool).await.map(|r| r.id).map_err(|e| ServerFnError::new(e.to_string()))?;
+        let author_id_str = sqlx::query!("SELECT id FROM users LIMIT 1").fetch_one(&pool).await.map(|r| r.id).map_err(|e| ServerFnError::new(e.to_string()))?;
+        let author_id = uuid::Uuid::parse_str(&author_id_str.unwrap_or_default()).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.add_book(&slug, &title, description, author_id)
             .await.map_err(|e| ServerFnError::new(e.to_string()))?;
         Ok(())

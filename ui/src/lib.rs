@@ -69,6 +69,8 @@ pub fn App() -> impl IntoView {
                     <Route path="search" view=SearchPage/>
                     <Route path="projects" view=ProjectsPage/>
                     <Route path="books" view=BooksPage/>
+                    <Route path="books/:slug" view=BookIndexPage/>
+                    <Route path="books/:slug/:chapter" view=BookChapterPage/>
                     <Route path="articles" view=ArticlesPage/>
                     <Route path="articles/:slug" view=ArticlePage/>
                     <Route path="login" view=LoginPage/>
@@ -470,14 +472,18 @@ fn BooksPage() -> impl IntoView {
                             view! {
                                 <div class="books-grid">
                                     {bs.into_iter().map(|b| view! {
-                                        <div class="book-card">
-                                            <div class="book-cover">"📚"</div>
-                                            <div class="book-info">
-                                                <h3>{b.title}</h3>
-                                                {if let Some(desc) = b.description {
-                                                    view! { <p>{desc}</p> }.into_view()
-                                                } else { view! {}.into_view() }}
-                                            </div>
+                                        <div class="book-card-wrapper" style="text-decoration: none; color: inherit; display: block;">
+                                            <A href=format!("/books/{}", b.slug) class="book-card-link">
+                                                <div class="book-card">
+                                                    <div class="book-cover">"📚"</div>
+                                                    <div class="book-info">
+                                                        <h3>{b.title}</h3>
+                                                        {if let Some(desc) = b.description {
+                                                            view! { <p>{desc}</p> }.into_view()
+                                                        } else { view! {}.into_view() }}
+                                                    </div>
+                                                </div>
+                                            </A>
                                         </div>
                                     }).collect_view()}
                                 </div>
@@ -1345,6 +1351,82 @@ pub fn AdminBooks() -> impl IntoView {
                     </table>
                 </div>
             </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn BookIndexPage() -> impl IntoView {
+    let params = use_params_map();
+    let slug = move || params.with(|p| p.get("slug").cloned().unwrap_or_default());
+    
+    let manifest = create_resource(slug, |s| async move {
+        if s.is_empty() { return None; }
+        api::get_book_manifest(s).await.ok()
+    });
+
+    view! {
+        <div class="page-section animate-fade-in container">
+            <Transition fallback=move || view! { <div class="skeleton-loader" style="height: 200px;"></div> }>
+                {move || {
+                    manifest.get().flatten().map(|m| {
+                        let slug_val = slug();
+                        view! {
+                            <div class="book-index">
+                                <h1 class="section-title">{m.title}</h1>
+                                {if let Some(subtitle) = m.subtitle {
+                                    view! { <h3 class="section-subtitle">{subtitle}</h3> }.into_view()
+                                } else { view! {}.into_view() }}
+                                <p class="text-muted" style="margin-bottom: 2rem;">{m.description}</p>
+                                
+                                <h2>"Table of Contents"</h2>
+                                <ol class="chapter-list" style="margin-top: 1rem; line-height: 1.8; list-style-position: inside;">
+                                    {m.chapters.into_iter().map(|chap| {
+                                        let display_name = chap.replace(".md", "").replace(".mdx", "").replace("-", " ");
+                                        view! {
+                                            <li>
+                                                <A href=format!("/books/{}/{}", slug_val, chap)>{display_name}</A>
+                                            </li>
+                                        }
+                                    }).collect_view()}
+                                </ol>
+                            </div>
+                        }
+                    })
+                }}
+            </Transition>
+        </div>
+    }
+}
+
+#[component]
+pub fn BookChapterPage() -> impl IntoView {
+    let params = use_params_map();
+    let slug = move || params.with(|p| p.get("slug").cloned().unwrap_or_default());
+    let chapter = move || params.with(|p| p.get("chapter").cloned().unwrap_or_default());
+    
+    let content = create_resource(
+        move || (slug(), chapter()),
+        |(s, c)| async move {
+            if s.is_empty() || c.is_empty() { return None; }
+            api::get_book_chapter(s, c).await.ok()
+        }
+    );
+
+    view! {
+        <div class="page-section animate-fade-in container">
+            <div style="margin-bottom: 2rem;">
+                <A href=move || format!("/books/{}", slug()) class="button button-outline">
+                    "&larr; Back to Index"
+                </A>
+            </div>
+            
+            <Transition fallback=move || view! { <div class="loading">"Loading chapter..."</div> }>
+                {move || content.get().map(|c| view! {
+                    <article class="markdown-body" inner_html=c/>
+                    <script>"setTimeout(function() { if (window.hljs) window.hljs.highlightAll(); }, 50);"</script>
+                })}
+            </Transition>
         </div>
     }
 }
