@@ -1,5 +1,5 @@
 use thiserror::Error;
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 use database::repositories::ArticleRepository;
 use domain::models::Article;
 
@@ -12,11 +12,11 @@ pub enum ArticleError {
 }
 
 pub struct ArticleService {
-    pool: PgPool,
+    pool: SqlitePool,
 }
 
 impl ArticleService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 

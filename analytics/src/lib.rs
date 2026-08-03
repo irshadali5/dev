@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 use thiserror::Error;
 use serde::{Serialize, Deserialize};
 
@@ -15,11 +15,11 @@ pub enum AnalyticsError {
 }
 
 pub struct AnalyticsService {
-    pool: PgPool,
+    pool: SqlitePool,
 }
 
 impl AnalyticsService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
@@ -66,7 +66,7 @@ impl AnalyticsService {
         .await?;
 
         let views = records.into_iter().map(|r| PageView {
-            slug: r.slug,
+            slug: r.slug.unwrap_or_default(),
             view_count: r.view_count,
         }).collect();
 

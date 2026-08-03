@@ -8,12 +8,12 @@ use leptos::{LeptosOptions, view};
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
 use axum::extract::Extension;
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 
 pub async fn file_and_error_handler(
     uri: Uri,
     State(options): State<LeptosOptions>,
-    Extension(pool): Extension<PgPool>,
+    Extension(pool): Extension<SqlitePool>,
     req: Request<Body>,
 ) -> AxumResponse {
     let root = options.site_root.clone();

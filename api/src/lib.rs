@@ -44,7 +44,7 @@ pub async fn get_projects() -> Result<Vec<Project>, ServerFnError> {
     {
         use portfolio::service::PortfolioService;
 
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let service = PortfolioService::new(pool);
         
         let projects = service.get_all_projects().await.map_err(|e| {
@@ -63,7 +63,7 @@ pub async fn get_projects() -> Result<Vec<Project>, ServerFnError> {
 pub async fn get_books() -> Result<Vec<Book>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let service = books::service::BookService::new(pool);
         let books = service.get_reading_list().await.map_err(|e| {
             let err: ServerFnError = ServerFnError::new(e.to_string());
@@ -83,7 +83,7 @@ pub async fn get_articles() -> Result<Vec<Article>, ServerFnError> {
     {
         use articles::service::ArticleService;
 
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let service = ArticleService::new(pool);
         let articles = service.get_all_articles().await.map_err(|e| {
             let err: ServerFnError = ServerFnError::new(e.to_string());
@@ -103,7 +103,7 @@ pub async fn get_article(slug: String) -> Result<(Article, i64), ServerFnError> 
     {
         use articles::service::ArticleService;
 
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let service = ArticleService::new(pool.clone());
         let article = service.get_article(&slug).await.map_err(|e| {
             let err: ServerFnError = ServerFnError::new(e.to_string());
@@ -144,7 +144,7 @@ pub async fn submit_contact_form(name: String, email: String, message: String) -
 pub async fn record_view(slug: String) -> Result<(), ServerFnError> {
     #[cfg(feature = "ssr")]
     {
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let analytics = analytics::AnalyticsService::new(pool);
         let _ = analytics.record_view(&slug).await;
         Ok(())
@@ -159,7 +159,7 @@ pub async fn record_view(slug: String) -> Result<(), ServerFnError> {
 pub async fn get_analytics() -> Result<Vec<UiPageView>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let analytics_service = analytics::AnalyticsService::new(pool);
         let views = analytics_service.get_all_views().await.unwrap_or_default();
         
@@ -181,7 +181,7 @@ pub async fn rebuild_search_index() -> Result<(), ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         let search_service = expect_context::<search::SearchService>();
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         search_service.index_articles(pool).await.map_err(|e| {
             let err: ServerFnError = ServerFnError::new(e.to_string());
             err
@@ -232,7 +232,7 @@ pub async fn verify_admin() -> Result<(), ServerFnError> {
     
     let token = token.ok_or_else(|| ServerFnError::new("Unauthorized".to_string()))?;
     
-    let pool = expect_context::<sqlx::PgPool>();
+    let pool = expect_context::<sqlx::SqlitePool>();
     let auth_service = AuthService::new(pool, get_jwt_secret());
     
     let claims = auth_service.verify_token(&token)
@@ -265,7 +265,7 @@ pub async fn login(email: String, password: String) -> Result<bool, ServerFnErro
         use std::env;
         use leptos_axum::ResponseOptions;
 
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let secret = get_jwt_secret();
         
         let auth_service = AuthService::new(pool, secret);
@@ -295,7 +295,7 @@ pub async fn get_timeline() -> Result<Vec<TimelineItem>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         use database::repositories::PortfolioRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = PortfolioRepository::new(pool);
         let items = repo.get_timeline_items().await.map_err(|e| ServerFnError::new(e.to_string()))?;
         Ok(items)
@@ -312,7 +312,7 @@ pub async fn add_timeline_item(item_type: String, title: String, organization: S
     {
         verify_admin().await?;
         use database::repositories::PortfolioRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = PortfolioRepository::new(pool);
         repo.add_timeline_item(&item_type, &title, &organization, &period, &description, order_index)
             .await.map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -330,7 +330,7 @@ pub async fn delete_timeline_item(id: String) -> Result<(), ServerFnError> {
     {
         verify_admin().await?;
         use database::repositories::PortfolioRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = PortfolioRepository::new(pool);
         let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.delete_timeline_item(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -347,7 +347,7 @@ pub async fn get_skills() -> Result<Vec<Skill>, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         use database::repositories::PortfolioRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = PortfolioRepository::new(pool);
         let skills = repo.get_skills().await.map_err(|e| ServerFnError::new(e.to_string()))?;
         Ok(skills)
@@ -364,7 +364,7 @@ pub async fn add_skill(category: String, name: String, order_index: i32) -> Resu
     {
         verify_admin().await?;
         use database::repositories::PortfolioRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = PortfolioRepository::new(pool);
         repo.add_skill(&category, &name, order_index)
             .await.map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -382,7 +382,7 @@ pub async fn delete_skill(id: String) -> Result<(), ServerFnError> {
     {
         verify_admin().await?;
         use database::repositories::PortfolioRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = PortfolioRepository::new(pool);
         let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.delete_skill(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -400,7 +400,7 @@ pub async fn add_project(slug: String, title: String, description: String, conte
     {
         verify_admin().await?;
         use database::repositories::ProjectRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = ProjectRepository::new(pool);
         repo.add_project(&slug, &title, &description, &content_html, github_url, live_url)
             .await.map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -418,7 +418,7 @@ pub async fn delete_project(id: String) -> Result<(), ServerFnError> {
     {
         verify_admin().await?;
         use database::repositories::ProjectRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = ProjectRepository::new(pool);
         let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.delete_project(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -436,7 +436,7 @@ pub async fn add_article(slug: String, title: String, description: String, body:
     {
         verify_admin().await?;
         use database::repositories::ArticleRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = ArticleRepository::new(pool.clone());
         // Default author_id for now or fetch from token. We will use a dummy uuid or fetch the admin uuid.
         // Assuming admin is the only author. We need the auth_id. For now, use uuid::Uuid::nil() or parse from claims.
@@ -457,7 +457,7 @@ pub async fn delete_article(id: String) -> Result<(), ServerFnError> {
     {
         verify_admin().await?;
         use database::repositories::ArticleRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = ArticleRepository::new(pool);
         let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.delete_article(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;
@@ -475,7 +475,7 @@ pub async fn add_book(slug: String, title: String, description: Option<String>) 
     {
         verify_admin().await?;
         use database::repositories::BookRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = BookRepository::new(pool.clone());
         let author_id = sqlx::query!("SELECT id FROM users LIMIT 1").fetch_one(&pool).await.map(|r| r.id).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.add_book(&slug, &title, description, author_id)
@@ -494,7 +494,7 @@ pub async fn delete_book(id: String) -> Result<(), ServerFnError> {
     {
         verify_admin().await?;
         use database::repositories::BookRepository;
-        let pool = expect_context::<sqlx::PgPool>();
+        let pool = expect_context::<sqlx::SqlitePool>();
         let repo = BookRepository::new(pool);
         let uuid = uuid::Uuid::parse_str(&id).map_err(|e| ServerFnError::new(e.to_string()))?;
         repo.delete_book(uuid).await.map_err(|e| ServerFnError::new(e.to_string()))?;

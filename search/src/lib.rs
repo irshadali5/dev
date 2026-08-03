@@ -62,7 +62,7 @@ impl SearchService {
         })
     }
 
-    pub async fn index_articles(&self, pool: sqlx::PgPool) -> Result<(), SearchError> {
+    pub async fn index_articles(&self, pool: sqlx::SqlitePool) -> Result<(), SearchError> {
         let mut index_writer = self.index.writer(50_000_000)?;
         
         let article_service = ArticleService::new(pool);

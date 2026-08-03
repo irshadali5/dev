@@ -1,13 +1,13 @@
 use database::repositories::ProjectRepository;
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 use domain::models::Project;
 
 pub struct PortfolioService {
-    pool: PgPool,
+    pool: SqlitePool,
 }
 
 impl PortfolioService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 

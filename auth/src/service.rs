@@ -2,7 +2,7 @@ use chrono::{Duration, Utc};
 use database::repositories::UserRepository;
 use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -33,7 +33,7 @@ pub struct AuthService {
 }
 
 impl AuthService {
-    pub fn new(pool: PgPool, jwt_secret: String) -> Self {
+    pub fn new(pool: SqlitePool, jwt_secret: String) -> Self {
         Self {
             repo: UserRepository::new(pool),
             jwt_secret,
