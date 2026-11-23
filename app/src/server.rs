@@ -455,3 +455,265 @@ pub async fn metrics_handler(
         metrics,
     )
 }
+
+// ==========================================
+// Public REST JSON API v1 Endpoints
+// ==========================================
+
+pub async fn api_v1_articles_handler(
+    Extension(conn): Extension<database::DatabaseConnection>,
+) -> impl axum::response::IntoResponse {
+    use database::repositories::ArticleRepository;
+    let repo = ArticleRepository::new(conn);
+    let articles = repo.get_published_articles().await.unwrap_or_default();
+    
+    let json_articles: Vec<serde_json::Value> = articles.into_iter().map(|a| {
+        serde_json::json!({
+            "id": a.id.to_string(),
+            "slug": a.slug,
+            "title": a.title,
+            "description": a.description,
+            "published": a.published,
+            "created_at": a.created_at.to_rfc3339(),
+            "updated_at": a.updated_at.to_rfc3339(),
+            "tags": a.tags,
+            "url": format!("/articles/{}", a.slug),
+        })
+    }).collect();
+
+    (
+        axum::http::StatusCode::OK,
+        [
+            ("Content-Type", "application/json; charset=utf-8"),
+            ("Access-Control-Allow-Origin", "*"),
+        ],
+        serde_json::to_string(&json_articles).unwrap_or_default(),
+    )
+}
+
+pub async fn api_v1_article_detail_handler(
+    axum::extract::Path(slug): axum::extract::Path<String>,
+    Extension(conn): Extension<database::DatabaseConnection>,
+) -> impl axum::response::IntoResponse {
+    use database::repositories::ArticleRepository;
+    let repo = ArticleRepository::new(conn.clone());
+    
+    if let Ok(Some(article)) = repo.find_by_slug(&slug).await {
+        let likes = repo.get_likes(&slug).await.unwrap_or(0);
+        let reading_time = markdown::MarkdownParser::estimate_reading_time(&article.body);
+        let parsed_html = markdown::MarkdownParser::to_html(&article.body);
+
+        let body = serde_json::json!({
+            "id": article.id.to_string(),
+            "slug": article.slug,
+            "title": article.title,
+            "description": article.description,
+            "html": parsed_html,
+            "raw_markdown": article.body,
+            "reading_time_minutes": reading_time,
+            "likes": likes,
+            "tags": article.tags,
+            "created_at": article.created_at.to_rfc3339(),
+            "updated_at": article.updated_at.to_rfc3339(),
+        });
+
+        (
+            axum::http::StatusCode::OK,
+            [
+                ("Content-Type", "application/json; charset=utf-8"),
+                ("Access-Control-Allow-Origin", "*"),
+            ],
+            body.to_string(),
+        )
+    } else {
+        (
+            axum::http::StatusCode::NOT_FOUND,
+            [
+                ("Content-Type", "application/json; charset=utf-8"),
+                ("Access-Control-Allow-Origin", "*"),
+            ],
+            serde_json::json!({"error": "Article not found", "slug": slug}).to_string(),
+        )
+    }
+}
+
+pub async fn api_v1_projects_handler(
+    Extension(conn): Extension<database::DatabaseConnection>,
+) -> impl axum::response::IntoResponse {
+    use database::repositories::ProjectRepository;
+    let repo = ProjectRepository::new(conn);
+    let projects = repo.get_all_projects().await.unwrap_or_default();
+
+    let json_projs: Vec<serde_json::Value> = projects.into_iter().map(|p| {
+        serde_json::json!({
+            "id": p.id.to_string(),
+            "slug": p.slug,
+            "title": p.title,
+            "description": p.description,
+            "github_url": p.github_url,
+            "live_url": p.live_url,
+            "url": format!("/projects/{}", p.slug),
+        })
+    }).collect();
+
+    (
+        axum::http::StatusCode::OK,
+        [
+            ("Content-Type", "application/json; charset=utf-8"),
+            ("Access-Control-Allow-Origin", "*"),
+        ],
+        serde_json::to_string(&json_projs).unwrap_or_default(),
+    )
+}
+
+pub async fn api_v1_books_handler(
+    Extension(conn): Extension<database::DatabaseConnection>,
+) -> impl axum::response::IntoResponse {
+    use database::repositories::BookRepository;
+    let repo = BookRepository::new(conn);
+    let books = repo.get_all_books().await.unwrap_or_default();
+
+    let json_books: Vec<serde_json::Value> = books.into_iter().map(|b| {
+        serde_json::json!({
+            "id": b.id.to_string(),
+            "slug": b.slug,
+            "title": b.title,
+            "description": b.description,
+            "url": format!("/books/{}", b.slug),
+        })
+    }).collect();
+
+    (
+        axum::http::StatusCode::OK,
+        [
+            ("Content-Type", "application/json; charset=utf-8"),
+            ("Access-Control-Allow-Origin", "*"),
+        ],
+        serde_json::to_string(&json_books).unwrap_or_default(),
+    )
+}
+
+pub async fn api_v1_skills_handler(
+    Extension(conn): Extension<database::DatabaseConnection>,
+) -> impl axum::response::IntoResponse {
+    use database::repositories::PortfolioRepository;
+    let repo = PortfolioRepository::new(conn);
+    let skills = repo.get_skills().await.unwrap_or_default();
+
+    let json_skills: Vec<serde_json::Value> = skills.into_iter().map(|s| {
+        serde_json::json!({
+            "id": s.id.to_string(),
+            "category": s.category,
+            "name": s.name,
+            "order": s.order_index,
+        })
+    }).collect();
+
+    (
+        axum::http::StatusCode::OK,
+        [
+            ("Content-Type", "application/json; charset=utf-8"),
+            ("Access-Control-Allow-Origin", "*"),
+        ],
+        serde_json::to_string(&json_skills).unwrap_or_default(),
+    )
+}
+
+pub async fn api_v1_stats_handler(
+    Extension(conn): Extension<database::DatabaseConnection>,
+) -> impl axum::response::IntoResponse {
+    use database::repositories::{AnalyticsRepository, ArticleRepository, ProjectRepository, BookRepository, PortfolioRepository};
+    
+    let analytics_repo = AnalyticsRepository::new(conn.clone());
+    let article_repo = ArticleRepository::new(conn.clone());
+    let project_repo = ProjectRepository::new(conn.clone());
+    let book_repo = BookRepository::new(conn.clone());
+    let portfolio_repo = PortfolioRepository::new(conn);
+
+    let total_views = analytics_repo.get_total_views().await.unwrap_or(0);
+    let articles_count = article_repo.get_published_articles().await.map(|a| a.len()).unwrap_or(0);
+    let projects_count = project_repo.get_all_projects().await.map(|p| p.len()).unwrap_or(0);
+    let books_count = book_repo.get_all_books().await.map(|b| b.len()).unwrap_or(0);
+    let skills_count = portfolio_repo.get_skills().await.map(|s| s.len()).unwrap_or(0);
+    let uptime = get_uptime_secs();
+
+    let stats = serde_json::json!({
+        "uptime_seconds": uptime,
+        "total_page_views": total_views,
+        "articles_count": articles_count,
+        "projects_count": projects_count,
+        "books_count": books_count,
+        "skills_count": skills_count,
+        "engine": "stoolap",
+        "container_runtime": "kiri",
+        "framework": "leptos_ssr_axum",
+        "pure_rust": true
+    });
+
+    (
+        axum::http::StatusCode::OK,
+        [
+            ("Content-Type", "application/json; charset=utf-8"),
+            ("Access-Control-Allow-Origin", "*"),
+        ],
+        stats.to_string(),
+    )
+}
+
+pub async fn api_v1_openapi_handler() -> impl axum::response::IntoResponse {
+    let spec = serde_json::json!({
+        "openapi": "3.0.3",
+        "info": {
+            "title": "Irshad Ali - Developer Platform Public API",
+            "version": "1.0.0",
+            "description": "Public REST API providing access to articles, technical projects, books, skills, and system telemetry."
+        },
+        "paths": {
+            "/api/v1/articles": {
+                "get": {
+                    "summary": "List all published articles",
+                    "responses": { "200": { "description": "JSON array of articles" } }
+                }
+            },
+            "/api/v1/articles/{slug}": {
+                "get": {
+                    "summary": "Get full article content and metadata",
+                    "responses": { "200": { "description": "Full article with rendered HTML and TOC" } }
+                }
+            },
+            "/api/v1/projects": {
+                "get": {
+                    "summary": "List technical portfolio projects",
+                    "responses": { "200": { "description": "JSON array of projects" } }
+                }
+            },
+            "/api/v1/books": {
+                "get": {
+                    "summary": "List technical books and guides",
+                    "responses": { "200": { "description": "JSON array of books" } }
+                }
+            },
+            "/api/v1/skills": {
+                "get": {
+                    "summary": "List technical skills by category",
+                    "responses": { "200": { "description": "JSON array of categorized skills" } }
+                }
+            },
+            "/api/v1/stats": {
+                "get": {
+                    "summary": "Get platform telemetry and content statistics",
+                    "responses": { "200": { "description": "Platform statistics JSON" } }
+                }
+            }
+        }
+    });
+
+    (
+        axum::http::StatusCode::OK,
+        [
+            ("Content-Type", "application/json; charset=utf-8"),
+            ("Access-Control-Allow-Origin", "*"),
+        ],
+        spec.to_string(),
+    )
+}
