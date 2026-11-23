@@ -36,3 +36,11 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Rust
 /target
 Cargo.lock
+
+# Database runtime data & search index
+content/.search_index/
+*.stoolap
+/data/
+/database/data/
+/database/dev_site.db/
+
