@@ -1,0 +1,15 @@
+SiteConfig(
+    title: "Irshad Ali — Software Engineer & Systems Architect",
+    tagline: "High-Performance Distributed Systems, Rust, and Cloud Architecture",
+    author: "Irshad Ali",
+    email: "contact@irshadali.org",
+    bio: "Systems architect building resilient distributed backends, developer tooling, and modern web applications with Rust.",
+    site_url: "https://irshadali.org",
+    github_url: "https://github.com/irshadali5",
+    linkedin_url: "https://linkedin.com/in/irshadali5",
+    twitter_url: Some("https://twitter.com/irshadali5"),
+    database: DatabaseConfig(
+        engine: "stoolap",
+        path: "data/dev_site.stoolap",
+    ),
+)
