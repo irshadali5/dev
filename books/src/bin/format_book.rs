@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut entries: Vec<PathBuf> = fs::read_dir(source_dir)?
         .filter_map(|res| res.ok())
         .map(|e| e.path())
-        .filter(|p| p.is_file() && p.extension().map_or(false, |ext| ext == "md"))
+        .filter(|p| p.is_file() && p.extension().is_some_and(|ext| ext == "md"))
         .collect();
 
     entries.sort();
@@ -131,10 +131,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn parse_frontmatter_and_body(content: &str) -> (String, String) {
-    if content.starts_with("---") {
-        if let Some(end_idx) = content[3..].find("---") {
-            let fm = &content[3..3 + end_idx];
-            let body = &content[3 + end_idx + 3..];
+    if let Some(stripped) = content.strip_prefix("---") {
+        if let Some(end_idx) = stripped.find("---") {
+            let fm = &stripped[..end_idx];
+            let body = &stripped[end_idx + 3..];
             return (fm.trim().to_string(), body.trim().to_string());
         }
     }
@@ -148,12 +148,12 @@ fn parse_yaml_frontmatter(fm_str: &str) -> Result<Frontmatter, String> {
 
     for line in fm_str.lines() {
         let line = line.trim();
-        if line.starts_with("title:") {
-            title = line["title:".len()..].trim().trim_matches('"').to_string();
-        } else if line.starts_with("description:") {
-            description = line["description:".len()..].trim().trim_matches('"').to_string();
-        } else if line.starts_with("order:") {
-            if let Ok(ord) = line["order:".len()..].trim().parse::<u32>() {
+        if let Some(val) = line.strip_prefix("title:") {
+            title = val.trim().trim_matches('"').to_string();
+        } else if let Some(val) = line.strip_prefix("description:") {
+            description = val.trim().trim_matches('"').to_string();
+        } else if let Some(val) = line.strip_prefix("order:") {
+            if let Ok(ord) = val.trim().parse::<u32>() {
                 order = ord;
             }
         }
@@ -180,6 +180,7 @@ fn escape_quotes(s: &str) -> String {
     s.replace('"', "\\\"")
 }
 
+#[allow(clippy::too_many_arguments)]
 fn clean_markdown_body(
     body: &str,
     re_filename: &Regex,
