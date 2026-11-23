@@ -270,6 +270,49 @@ impl ArticleRepository {
         db.execute(&sql, ())?;
         Ok(())
     }
+
+    pub async fn get_likes(&self, slug: &str) -> DbResult<u64> {
+        let db = self.conn.inner();
+        let sql = format!(
+            "SELECT likes_count FROM article_likes WHERE slug = '{}' LIMIT 1",
+            slug.replace('\'', "''")
+        );
+        let mut rows = db.query(&sql, ())?;
+        if let Some(row_res) = rows.next() {
+            let row = row_res?;
+            let count: i64 = row.get(0)?;
+            return Ok(count.max(0) as u64);
+        }
+        Ok(0)
+    }
+
+    pub async fn increment_likes(&self, slug: &str) -> DbResult<u64> {
+        let db = self.conn.inner();
+        let check_sql = format!(
+            "SELECT row_id, likes_count FROM article_likes WHERE slug = '{}' LIMIT 1",
+            slug.replace('\'', "''")
+        );
+        let mut existing = db.query(&check_sql, ())?;
+        if let Some(row_res) = existing.next() {
+            let row = row_res?;
+            let row_id: i64 = row.get(0)?;
+            let current: i64 = row.get(1)?;
+            let next_count = current + 1;
+            let update_sql = format!(
+                "UPDATE article_likes SET likes_count = {} WHERE row_id = {}",
+                next_count, row_id
+            );
+            db.execute(&update_sql, ())?;
+            return Ok(next_count as u64);
+        }
+
+        let insert_sql = format!(
+            "INSERT INTO article_likes (slug, likes_count) VALUES ('{}', 1)",
+            slug.replace('\'', "''")
+        );
+        db.execute(&insert_sql, ())?;
+        Ok(1)
+    }
 }
 
 pub struct ProjectRepository {
