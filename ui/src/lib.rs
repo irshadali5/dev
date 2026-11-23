@@ -111,6 +111,7 @@ pub fn App() -> impl IntoView {
                         <A href="/experience" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Experience"</A>
                         <A href="/articles" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Articles"</A>
                         <A href="/books" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Books"</A>
+                        <A href="/uses" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Uses"</A>
                         <A href="/tools" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Tools"</A>
                         <A href="/about" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"About"</A>
                         <A href="/contact" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Contact"</A>
@@ -157,6 +158,7 @@ pub fn App() -> impl IntoView {
                     <Route path="books" view=BooksPage/>
                     <Route path="books/:slug" view=BookIndexPage/>
                     <Route path="books/:slug/:chapter" view=BookChapterPage/>
+                    <Route path="uses" view=UsesPage/>
                     <Route path="articles" view=ArticlesPage/>
                     <Route path="articles/:slug" view=ArticlePage/>
                     <Route path="writing" view=ArticlesPage/>
@@ -214,6 +216,7 @@ pub fn App() -> impl IntoView {
                                     <A href="/projects" class="terminal-link">"drwxr-xr-x  portfolio/"</A>
                                     <A href="/articles" class="terminal-link">"drwxr-xr-x  articles/"</A>
                                     <A href="/books" class="terminal-link">"drwxr-xr-x  books/"</A>
+                                    <A href="/uses" class="terminal-link">"-rw-r--r--  uses.md"</A>
                                     <A href="/about" class="terminal-link">"-rw-r--r--  about.md"</A>
                                     <A href="/resume" class="terminal-link">"-rw-r--r--  resume.md"</A>
                                 </div>
@@ -1100,9 +1103,20 @@ fn ProjectDetailPage() -> impl IntoView {
                                     })}
                                 </div>
 
-                                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                                <div class="architecture-topology-card" style="margin-top: 1.25rem; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.4);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                                        <span style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent);">"System Architecture Topology"</span>
+                                        <span class="tag" style="font-size: 0.75rem; padding: 2px 8px;">"Kiri Pure-Rust OCI Sandboxing"</span>
+                                    </div>
+                                    <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+                                        "Client (Browser / WASM Hydrated) ──[HTTP/2 TLS]──> Edge Gateway (Axum 0.7) ──> In-Memory MVCC Store (Stoolap v0.5.1) + Full-Text Inverted Index (Tantivy)"
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem; align-items: center;">
                                     {p.github_url.map(|url| view! { <a href=url target="_blank" class="btn btn-primary">"View on GitHub &nearr;"</a> })}
                                     {p.live_url.map(|url| view! { <a href=url target="_blank" class="btn btn-secondary">"Live Demo &nearr;"</a> })}
+                                    <ClapButton slug=p.slug.clone()/>
                                 </div>
                             </div>
 
@@ -1382,12 +1396,15 @@ fn ArticlePage() -> impl IntoView {
                                         <header class="article-header">
                                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
                                                 <A href="/articles" class="btn btn-secondary">"&larr; All Articles"</A>
-                                                <BookmarkButton 
-                                                    slug=art.slug.clone() 
-                                                    title=art.title.clone() 
-                                                    doc_type="Article".to_string() 
-                                                    url=format!("/articles/{}", art.slug) 
-                                                />
+                                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                                    <ClapButton slug=art.slug.clone()/>
+                                                    <BookmarkButton 
+                                                        slug=art.slug.clone() 
+                                                        title=art.title.clone() 
+                                                        doc_type="Article".to_string() 
+                                                        url=format!("/articles/{}", art.slug) 
+                                                    />
+                                                </div>
                                             </div>
                                             <h1 class="article-main-title">{art.title.clone()}</h1>
                                             <div class="article-meta-row">
@@ -1402,10 +1419,13 @@ fn ArticlePage() -> impl IntoView {
                                         <div class="article-content prose" inner_html=art.body></div>
                                         
                                         <footer class="article-footer">
-                                            <div class="article-tags">
-                                                {art.tags.into_iter().map(|t| view! {
-                                                    <span class="tag">{t}</span>
-                                                }).collect_view()}
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                                                <div class="article-tags">
+                                                    {art.tags.into_iter().map(|t| view! {
+                                                        <span class="tag">{t}</span>
+                                                    }).collect_view()}
+                                                </div>
+                                                <ClapButton slug=art.slug.clone()/>
                                             </div>
                                             
                                             <div class="article-nav">
@@ -1513,6 +1533,7 @@ pub fn LoginPage() -> impl IntoView {
 #[component]
 pub fn SearchPage() -> impl IntoView {
     let (query, set_query) = create_signal("".to_string());
+    let (selected_filter, set_selected_filter) = create_signal("All".to_string());
     
     let search_results = create_resource(move || query.get(), |q| async move { 
         if q.is_empty() {
@@ -1522,9 +1543,22 @@ pub fn SearchPage() -> impl IntoView {
         }
     });
 
+    let filtered_results = move || {
+        search_results.get().and_then(|res| res.ok()).map(|results| {
+            let filter = selected_filter.get();
+            if filter == "All" {
+                results
+            } else if filter == "Book" {
+                results.into_iter().filter(|r| r.doc_type == "Book" || r.doc_type == "Book Chapter").collect::<Vec<_>>()
+            } else {
+                results.into_iter().filter(|r| r.doc_type.eq_ignore_ascii_case(&filter)).collect::<Vec<_>>()
+            }
+        })
+    };
+
     view! {
         <Title text="Search - Irshad"/>
-        <Meta name="description" content="Search across articles, projects, and books."/>
+        <Meta name="description" content="Search across articles, projects, books, and systems architecture."/>
         
         <div class="page-section max-w-3xl animate-fade-in">
             <h1 class="page-title">"Search"</h1>
@@ -1543,6 +1577,23 @@ pub fn SearchPage() -> impl IntoView {
                 </svg>
             </div>
             
+            <div class="search-filter-chips">
+                {["All", "Article", "Project", "Book", "Skill"].into_iter().map(|f| {
+                    let f_str = f.to_string();
+                    let is_active = move || selected_filter.get() == f_str;
+                    let f_click = f.to_string();
+                    view! {
+                        <button 
+                            type="button"
+                            class=move || format!("filter-chip {}", if is_active() { "active" } else { "" })
+                            on:click=move |_| set_selected_filter.set(f_click.clone())
+                        >
+                            {f}
+                        </button>
+                    }
+                }).collect_view()}
+            </div>
+
             <div class="search-results-wrap">
                 <Transition fallback=move || view! { 
                     <div class="search-results-list mt-8">
@@ -1551,44 +1602,42 @@ pub fn SearchPage() -> impl IntoView {
                     </div> 
                 }>
                     {move || {
-                        search_results.get().map(|res| {
-                            match res {
-                                Ok(results) => {
-                                    if results.is_empty() {
-                                        if query.get().is_empty() {
-                                            view! { <p class="search-empty-state">"Enter a search term above to find content."</p> }.into_view()
-                                        } else {
-                                            view! { <p class="search-empty-state">"No results found."</p> }.into_view()
-                                        }
-                                    } else {
-                                        view! {
-                                            <ul class="search-results-list">
-                                                {results.into_iter().map(|r| {
-                                                    let url = if r.slug.starts_with('/') {
-                                                        r.slug
-                                                    } else {
-                                                        format!("/{}", r.slug)
-                                                    };
-                                                    view! {
-                                                        <li class="search-result-card glass-panel" style="margin-bottom: 1rem;">
-                                                            <a href=url class="search-result-layout" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; gap: 1rem;">
-                                                                <div style="flex: 1;">
-                                                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                                                        <span class="tag" style="font-size: 0.75rem; padding: 2px 8px;">{r.doc_type}</span>
-                                                                        <h3 class="search-result-title" style="margin: 0; font-size: 1.2rem;">{r.title}</h3>
-                                                                    </div>
-                                                                    <p class="search-result-snippet" inner_html=r.snippet style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;"></p>
-                                                                </div>
-                                                                <span style="color: var(--accent); font-weight: 700;">"&rarr;"</span>
-                                                            </a>
-                                                        </li>
-                                                    }
-                                                }).collect_view()}
-                                            </ul>
-                                        }.into_view()
-                                    }
+                        filtered_results().map(|results| {
+                            if results.is_empty() {
+                                if query.get().is_empty() {
+                                    view! { <p class="search-empty-state">"Enter a search term above to find content."</p> }.into_view()
+                                } else {
+                                    view! { <p class="search-empty-state">"No results found matching \"" {query.get()} "\" for filter \"" {selected_filter.get()} "\"."</p> }.into_view()
                                 }
-                                Err(_) => view! { <p class="text-error">"An error occurred while searching."</p> }.into_view()
+                            } else {
+                                view! {
+                                    <div style="margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                                        {format!("Found {} result{}", results.len(), if results.len() == 1 { "" } else { "s" })}
+                                    </div>
+                                    <ul class="search-results-list">
+                                        {results.into_iter().map(|r| {
+                                            let url = if r.slug.starts_with('/') {
+                                                r.slug
+                                            } else {
+                                                format!("/{}", r.slug)
+                                            };
+                                            view! {
+                                                <li class="search-result-card glass-panel" style="margin-bottom: 1rem;">
+                                                    <a href=url class="search-result-layout" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; gap: 1rem;">
+                                                        <div style="flex: 1;">
+                                                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                                                <span class="tag" style="font-size: 0.75rem; padding: 2px 8px;">{r.doc_type}</span>
+                                                                <h3 class="search-result-title" style="margin: 0; font-size: 1.2rem;">{r.title}</h3>
+                                                            </div>
+                                                            <p class="search-result-snippet" inner_html=r.snippet style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;"></p>
+                                                        </div>
+                                                        <span style="color: var(--accent); font-weight: 700;">"&rarr;"</span>
+                                                    </a>
+                                                </li>
+                                            }
+                                        }).collect_view()}
+                                    </ul>
+                                }.into_view()
                             }
                         })
                     }}
@@ -2464,6 +2513,9 @@ pub fn CommandPalette(
                                                 <A href="/books" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
                                                     <span class="cmd-palette-item-title">"📚 Books & Technical Manuals"</span>
                                                 </A>
+                                                <A href="/uses" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"⚙️ Uses — Hardware, Linux Kernel & Toolchain"</span>
+                                                </A>
                                                 <A href="/tools" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
                                                     <span class="cmd-palette-item-title">"⚡ Systems Benchmarks & Latency Tools"</span>
                                                 </A>
@@ -2911,6 +2963,178 @@ pub fn ToolsPage() -> impl IntoView {
                             {move || if avg_latency_ms.get() < 2.0 { "⚡ In-Memory / CPU Bound" } else if avg_latency_ms.get() < 20.0 { "💾 Disk / Fast Database I/O" } else { "🌐 Network / Microservice Bound" }}
                         </span>
                     </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn ClapButton(slug: String) -> impl IntoView {
+    let slug_clone = slug.clone();
+    let likes_res = create_resource(move || slug_clone.clone(), |s| async move {
+        get_article_likes(s).await.unwrap_or(0)
+    });
+
+    let (optimistic_likes, set_optimistic_likes) = create_signal(Option::<u64>::None);
+    let (is_pulsing, set_pulsing) = create_signal(false);
+
+    let display_count = move || {
+        optimistic_likes.get().unwrap_or_else(|| likes_res.get().unwrap_or(0))
+    };
+
+    let on_clap = {
+        let slug = slug.clone();
+        move |_| {
+            let current = display_count();
+            set_optimistic_likes.set(Some(current + 1));
+            set_pulsing.set(true);
+
+            let s = slug.clone();
+            spawn_local(async move {
+                if let Ok(new_count) = like_article(s).await {
+                    set_optimistic_likes.set(Some(new_count));
+                }
+                set_pulsing.set(false);
+            });
+        }
+    };
+
+    view! {
+        <button 
+            class=move || format!("clap-btn {}", if is_pulsing.get() { "pulsing" } else { "" })
+            on:click=on_clap
+            title="Applaud / Clap"
+            type="button"
+        >
+            <span class="clap-icon">"👏"</span>
+            <span class="clap-count">{display_count}</span>
+        </button>
+    }
+}
+
+#[component]
+pub fn UsesPage() -> impl IntoView {
+    view! {
+        <Title text="Uses & Rig - Irshad Ali"/>
+        <Meta name="description" content="Development workstation, Linux kernel configuration, Kiri container runtime, and systems toolchain used by Irshad Ali."/>
+        
+        <div class="page-section max-w-4xl animate-fade-in container">
+            <header style="margin-bottom: 2.5rem;">
+                <div class="tag" style="margin-bottom: 0.75rem;">"Engineering Environment"</div>
+                <h1 class="section-title">"Hardware, Kernel & Toolchain"</h1>
+                <p class="text-muted" style="font-size: 1.15rem; line-height: 1.7; max-width: 720px;">
+                    "A living catalog of the physical workstation, Linux kernel subsystems, pure-Rust container sandboxes, and low-latency developer tooling I rely on daily for high-performance systems engineering."
+                </p>
+            </header>
+
+            <div class="uses-grid">
+                <div class="uses-card">
+                    <div class="uses-card-header">
+                        <span class="uses-card-icon">"🖥️"</span>
+                        <h2 class="uses-card-title">"Workstation Rig & Hardware"</h2>
+                    </div>
+                    <ul class="uses-item-list">
+                        <li class="uses-item">
+                            <span class="uses-item-label">"CPU: AMD Ryzen 9 7950X"</span>
+                            <span class="uses-item-desc">"16 Cores, 32 Threads, 5.7 GHz Boost, 80MB Cache. High multi-threaded compilation throughput."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Memory: 64GB DDR5-6000 ECC"</span>
+                            <span class="uses-item-desc">"Dual-channel error-correcting memory for mission-critical compilation and memory leak fuzzing."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"NVMe Storage: Samsung 990 Pro 2TB"</span>
+                            <span class="uses-item-desc">"PCIe 4.0 NVMe running at 7,450 MB/s sequential read, paired with 4TB ZFS mirror array."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"GPU: NVIDIA RTX 4080 (16GB VRAM)"</span>
+                            <span class="uses-item-desc">"Dedicated to local LLM inference (vLLM, Ollama) and CUDA kernel micro-benchmarks."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Peripherals: Keychron Q1 Pro & MX Master 3S"</span>
+                            <span class="uses-item-desc">"Custom 75% mechanical keyboard with Gateron Oil Kings, dual 27\" 4K Dell UltraSharp displays."</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="uses-card">
+                    <div class="uses-card-header">
+                        <span class="uses-card-icon">"🐧"</span>
+                        <h2 class="uses-card-title">"OS & Kernel Architecture"</h2>
+                    </div>
+                    <ul class="uses-item-list">
+                        <li class="uses-item">
+                            <span class="uses-item-label">"OS: Arch Linux / Void Linux (Musl)"</span>
+                            <span class="uses-item-desc">"Minimalist rolling distribution with zero bloat and maximum control over shared libraries."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Kernel: Linux 6.12+ LTS Custom Sysctl"</span>
+                            <span class="uses-item-desc">"Tuned for high file-descriptor limits (fs.file-max=2097152) and aggressive TCP window scaling."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Async I/O: io_uring Subsystem"</span>
+                            <span class="uses-item-desc">"Ring-buffer zero-copy submission and completion queues for high-throughput disk and socket I/O."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Observability: eBPF & bpftrace"</span>
+                            <span class="uses-item-desc">"Kernel probes (kprobes), tracepoints, and BCC scripts for microsecond latency profiling."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Network Stack: TCP BBRv3 & XDP"</span>
+                            <span class="uses-item-desc">"Bottleneck Bandwidth and RTT congestion control with Express Data Path packet filtering."</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="uses-card">
+                    <div class="uses-card-header">
+                        <span class="uses-card-icon">"📦"</span>
+                        <h2 class="uses-card-title">"Container Runtime & Isolation"</h2>
+                    </div>
+                    <ul class="uses-item-list">
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Runtime: Kiri (Pure-Rust Engine)"</span>
+                            <span class="uses-item-desc">"High-performance pure-Rust container engine (libracoder/kiri) compatible with Docker Engine API."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Orchestration: Kiri Compose Spec"</span>
+                            <span class="uses-item-desc">"Declarative service definitions running via kiri compose up -d with zero daemon bloat."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Sandboxing: cgroups v2 & seccomp-BPF"</span>
+                            <span class="uses-item-desc">"Fine-grained memory/CPU quota enforcement and strict syscall allowlists for safe execution."</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="uses-card">
+                    <div class="uses-card-header">
+                        <span class="uses-card-icon">"🦀"</span>
+                        <h2 class="uses-card-title">"Rust Toolchain & Systems Tooling"</h2>
+                    </div>
+                    <ul class="uses-item-list">
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Compiler: rustc Nightly + Stable"</span>
+                            <span class="uses-item-desc">"Managed via rustup with custom profiles, sccache compiler caching, and mold linker."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Profiling: cargo-flamegraph & Miri"</span>
+                            <span class="uses-item-desc">"Stacked sampling profiler for CPU bottlenecks and UB interpreter for unsafe code validation."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Testing: cargo-nextest & criterion"</span>
+                            <span class="uses-item-desc">"Parallel test runner with JUnit reporting and statistical latency benchmarking."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Editor: Neovim (v0.10 Lua) + rust-analyzer"</span>
+                            <span class="uses-item-desc">"Tree-sitter AST syntax, Telescope fuzzy search, Harpoon project navigation."</span>
+                        </li>
+                        <li class="uses-item">
+                            <span class="uses-item-label">"Database: Stoolap v0.5.1 & Tantivy"</span>
+                            <span class="uses-item-desc">"Embedded MVCC SQL engine and pure-Rust inverted index full-text search engine."</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
