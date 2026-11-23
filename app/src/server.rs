@@ -498,10 +498,10 @@ pub async fn api_v1_article_detail_handler(
     use database::repositories::ArticleRepository;
     let repo = ArticleRepository::new(conn.clone());
     
-    if let Ok(Some(article)) = repo.find_by_slug(&slug).await {
+    if let Ok(Some(article)) = repo.get_article_by_slug(&slug).await {
         let likes = repo.get_likes(&slug).await.unwrap_or(0);
-        let reading_time = markdown::MarkdownParser::estimate_reading_time(&article.body);
-        let parsed_html = markdown::MarkdownParser::to_html(&article.body);
+        let reading_time = markdown::MarkdownService::estimate_reading_time(&article.body);
+        let parsed_html = markdown::MarkdownService::parse_to_html(&article.body);
 
         let body = serde_json::json!({
             "id": article.id.to_string(),
