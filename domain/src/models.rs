@@ -43,6 +43,12 @@ pub struct Project {
     
     #[serde(default)]
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub architecture: Option<String>,
+    #[serde(default)]
+    pub benchmarks: Option<String>,
+    #[serde(default)]
+    pub lessons_learned: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,4 +96,47 @@ pub struct Skill {
     pub order_index: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContactMessage {
+    pub id: Uuid,
+    pub name: String,
+    pub email: String,
+    pub message: String,
+    pub is_read: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewsletterSubscriber {
+    pub id: Uuid,
+    pub email: String,
+    pub is_active: bool,
+    pub subscribed_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PlaygroundResponse {
+    pub success: bool,
+    pub stdout: String,
+    pub stderr: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct GithubActivityItem {
+    pub repo: String,
+    pub event_type: String,
+    pub message: String,
+    pub created_at: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct BookmarkItem {
+    pub slug: String,
+    pub title: String,
+    pub doc_type: String,
+    pub url: String,
+    pub timestamp: String,
 }
