@@ -1,6 +1,7 @@
-use sqlx::SqlitePool;
+use database::repositories::AnalyticsRepository;
+use database::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PageView {
@@ -11,65 +12,42 @@ pub struct PageView {
 #[derive(Error, Debug)]
 pub enum AnalyticsError {
     #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
+    Database(String),
 }
 
 pub struct AnalyticsService {
-    pool: SqlitePool,
+    repo: AnalyticsRepository,
 }
 
 impl AnalyticsService {
-    pub fn new(pool: SqlitePool) -> Self {
-        Self { pool }
+    pub fn new(conn: DatabaseConnection) -> Self {
+        Self {
+            repo: AnalyticsRepository::new(conn),
+        }
     }
 
     /// Records a page view for a given slug.
     pub async fn record_view(&self, slug: &str) -> Result<(), AnalyticsError> {
-        sqlx::query!(
-            r#"
-            INSERT INTO page_views (slug, view_count, last_viewed_at)
-            VALUES ($1, 1, CURRENT_TIMESTAMP)
-            ON CONFLICT (slug) DO UPDATE
-            SET view_count = page_views.view_count + 1,
-                last_viewed_at = CURRENT_TIMESTAMP
-            "#,
-            slug
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
+        self.repo
+            .record_view(slug)
+            .await
+            .map_err(|e| AnalyticsError::Database(e.to_string()))
     }
 
     /// Gets the view count for a given slug.
     pub async fn get_view_count(&self, slug: &str) -> Result<i64, AnalyticsError> {
-        let record = sqlx::query!(
-            r#"
-            SELECT view_count FROM page_views WHERE slug = $1
-            "#,
-            slug
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(record.map(|r| r.view_count).unwrap_or(0))
+        self.repo
+            .get_view_count(slug)
+            .await
+            .map(|c| c as i64)
+            .map_err(|e| AnalyticsError::Database(e.to_string()))
     }
 
-    /// Gets all page views ordered by view count descending.
-    pub async fn get_all_views(&self) -> Result<Vec<PageView>, AnalyticsError> {
-        let records = sqlx::query!(
-            r#"
-            SELECT slug, view_count FROM page_views ORDER BY view_count DESC
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        let views = records.into_iter().map(|r| PageView {
-            slug: r.slug.unwrap_or_default(),
-            view_count: r.view_count,
-        }).collect();
-
-        Ok(views)
+    /// Gets total page views across all pages.
+    pub async fn get_total_views(&self) -> Result<u64, AnalyticsError> {
+        self.repo
+            .get_total_views()
+            .await
+            .map_err(|e| AnalyticsError::Database(e.to_string()))
     }
 }
