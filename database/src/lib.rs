@@ -185,6 +185,15 @@ fn init_schema(conn: &DatabaseConnection) -> Result<(), Box<dyn std::error::Erro
         (),
     )?;
 
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS article_likes (
+            row_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+            slug TEXT NOT NULL,
+            likes_count INTEGER NOT NULL
+        )",
+        (),
+    )?;
+
     seed_initial_data(conn)?;
 
     Ok(())
