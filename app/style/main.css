@@ -1361,5 +1361,180 @@ h1:hover .heading-anchor, h2:hover .heading-anchor, h3:hover .heading-anchor, h4
     box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
+/* ============================================================
+   CLAP BUTTON & PULSE ANIMATION
+   ============================================================ */
+.clap-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    user-select: none;
+}
+
+.clap-btn:hover {
+    border-color: #f59e0b;
+    color: #f59e0b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
+}
+
+.clap-btn:active, .clap-btn.pulsing {
+    animation: clapPulse 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.clap-icon {
+    font-size: 1.1rem;
+    display: inline-block;
+    transition: transform var(--transition-fast);
+}
+
+.clap-btn:hover .clap-icon {
+    transform: scale(1.15) rotate(-5deg);
+}
+
+.clap-count {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+@keyframes clapPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+}
+
+/* ============================================================
+   SEARCH FILTER CHIPS
+   ============================================================ */
+.search-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-chip {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--font-sans);
+}
+
+.filter-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.filter-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* ============================================================
+   USES / TECH RIG PAGE
+   ============================================================ */
+.uses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.uses-card {
+    padding: 1.75rem;
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all var(--transition-normal);
+}
+
+.uses-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.uses-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.uses-card-icon {
+    font-size: 1.5rem;
+}
+
+.uses-card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.uses-item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.uses-item {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.uses-item-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+}
+
+.uses-item-desc {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.architecture-topology-card {
+    transition: all var(--transition-fast);
+}
+
+.architecture-topology-card:hover {
+    border-color: var(--accent) !important;
+}
+
+
 
 
