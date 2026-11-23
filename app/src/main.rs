@@ -32,8 +32,14 @@ async fn main() {
         let _ = api::Login::PATH;
     }
     
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = database::get_pool(&database_url).await.expect("Failed to connect to database");
+    server::init_start_time();
+
+    let site_config = config::SiteConfig::load();
+    let db_path = std::env::var("STOOLAP_DB_PATH")
+        .unwrap_or_else(|_| std::env::var("DATABASE_URL").unwrap_or_else(|_| site_config.database.path.clone()));
+    
+    tracing::info!("Initializing Stoolap database at {}", db_path);
+    let conn = database::get_db(&db_path).await.expect("Failed to initialize Stoolap database");
     
     // Initialize Asset Pipeline
     let content_dir = std::path::PathBuf::from("content");
@@ -46,14 +52,8 @@ async fn main() {
 
     // Initialize Search Service
     let search_service = search::SearchService::new().expect("Failed to initialize SearchService");
-    search_service.index_articles(pool.clone()).await.expect("Failed to index articles");
+    search_service.index_articles(conn.clone()).await.expect("Failed to index articles");
 
-
-    // Setting get_configuration(None) means we'll be using cargo-leptos's env values
-    // For deployment these variables are:
-    // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-    // Alternately a file can be specified such as Some("Cargo.toml")
-    // The file would need to be included with the executable when moved to deployment
     let conf = get_configuration(None).await.unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
@@ -62,29 +62,44 @@ async fn main() {
     // build our application with a route
     let app = Router::new()
         .route("/api/*fn_name", axum::routing::get({
-            let pool = pool.clone();
+            let conn = conn.clone();
             move |req: axum::http::Request<axum::body::Body>| leptos_axum::handle_server_fns_with_context(move || {
-                provide_context(pool.clone());
+                provide_context(conn.clone());
             }, req)
         }))
         .route("/api/*fn_name", axum::routing::post({
-            let pool = pool.clone();
+            let conn = conn.clone();
             move |req: axum::http::Request<axum::body::Body>| leptos_axum::handle_server_fns_with_context(move || {
-                provide_context(pool.clone());
+                provide_context(conn.clone());
             }, req)
         }))
         .route("/rss.xml", axum::routing::get(server::rss_handler))
+        .route("/feed", axum::routing::get(server::rss_handler))
+        .route("/atom.xml", axum::routing::get(server::atom_handler))
+        .route("/feed.atom", axum::routing::get(server::atom_handler))
+        .route("/feed.json", axum::routing::get(server::feed_json_handler))
         .route("/sitemap.xml", axum::routing::get(server::sitemap_handler))
+        .route("/robots.txt", axum::routing::get(server::robots_handler))
+        .route("/manifest.json", axum::routing::get(server::manifest_handler))
+        .route("/api/og", axum::routing::get(server::og_image_handler))
+        .route("/healthz", axum::routing::get({
+            let conn = conn.clone();
+            move || server::health_check_handler(axum::extract::State(conn.clone()))
+        }))
+        .route("/metrics", axum::routing::get({
+            let conn = conn.clone();
+            move || server::metrics_handler(axum::extract::State(conn.clone()))
+        }))
         .nest_service("/pkg", tower_http::services::ServeDir::new(format!("{}/pkg", leptos_options.site_root)))
         .leptos_routes_with_context(&leptos_options, routes, {
-            let pool = pool.clone();
+            let conn = conn.clone();
             move || {
-                provide_context(pool.clone());
+                provide_context(conn.clone());
             }
         }, App)
         .fallback(server::file_and_error_handler)
         .with_state(leptos_options)
-        .layer(axum::extract::Extension(pool))
+        .layer(axum::extract::Extension(conn))
         .layer(axum::extract::Extension(search_service))
         .layer(tower_http::compression::CompressionLayer::new())
         .layer(tower_http::trace::TraceLayer::new_for_http());
@@ -98,7 +113,4 @@ async fn main() {
 
 #[cfg(not(feature = "ssr"))]
 pub fn main() {
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for a purely client-side app
-    // see lib.rs for hydration function instead
 }
