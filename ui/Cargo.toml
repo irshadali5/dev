@@ -10,6 +10,8 @@ leptos_router = { workspace = true }
 domain = { path = "../domain" }
 api = { path = "../api" }
 serde = { workspace = true }
+serde_json = { workspace = true }
+web-sys = { version = "0.3.107", features = ["Window", "Document", "Element", "Storage", "KeyboardEvent", "SpeechSynthesis", "SpeechSynthesisUtterance"] }
 
 axum = { workspace = true, optional = true }
 leptos_axum = { workspace = true, optional = true }
