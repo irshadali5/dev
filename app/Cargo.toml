@@ -26,6 +26,7 @@ console_error_panic_hook = { version = "0.1.7", optional = true }
 console_log = { version = "1.1.0", optional = true }
 log = { workspace = true, optional = true }
 database = { path = "../database", optional = true }
+markdown = { path = "../markdown", optional = true }
 domain = { path = "../domain", optional = true }
 search = { path = "../search", optional = true }
 dotenvy = { workspace = true, optional = true }
@@ -60,6 +61,7 @@ ssr = [
     "dep:api",
     "dep:tracing-subscriber",
     "dep:database",
+    "dep:markdown",
     "dep:domain",
     "dep:search",
     "dep:dotenvy",
