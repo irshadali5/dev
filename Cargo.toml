@@ -1,18 +1,22 @@
 [workspace]
 members = [
-    "app",
-    "ui",
+    "analytics",
     "api",
-    "domain",
-    "database",
-    "config",
-    "shared",
-    "portfolio",
-    "books",
-    "markdown",
+    "app",
     "articles",
-    "auth"
-, "analytics", "search", "assets", "hasher"]
+    "assets",
+    "auth",
+    "books",
+    "config",
+    "database",
+    "domain",
+    "hasher",
+    "markdown",
+    "portfolio",
+    "search",
+    "shared",
+    "ui",
+]
 resolver = "2"
 
 [workspace.dependencies]
@@ -21,14 +25,34 @@ leptos = { version = "0.6" }
 leptos_axum = { version = "0.6" }
 leptos_meta = { version = "0.6" }
 leptos_router = { version = "0.6" }
-tokio = { version = "1.37", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1.43", features = ["rt-multi-thread", "macros", "time"] }
 tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["fs", "trace", "compression-full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-thiserror = "1.0"
+log = "0.4"
+thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
-sqlx = { version = "0.7", features = ["runtime-tokio", "tls-rustls", "sqlite", "uuid", "chrono"] }
+serde_json = "1.0"
+ron = "0.8"
+postcard = { version = "1.1", features = ["alloc"] }
+stoolap = "0.5.1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.15", features = ["v4", "serde"] }
+moka = { version = "0.12", features = ["sync"] }
+walkdir = "2.5"
+regex = "1.11"
+cfg-if = "1.0"
+argon2 = { version = "0.5.3", features = ["password-hash"] }
+syntect = { version = "5.3", default-features = false, features = ["parsing", "html", "regex-fancy", "default-syntaxes", "default-themes"] }
+pulldown-cmark = "0.10.3"
+webp = "0.3.1"
+rss = "2.1.2"
+reqwest = { version = "0.12", features = ["json"], default-features = false }
+tantivy = "0.22.1"
+image = "0.25"
+jsonwebtoken = "9.3"
+dotenvy = "0.15"
 
 [profile.wasm-release]
 inherits = "release"
