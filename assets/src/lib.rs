@@ -79,7 +79,7 @@ impl AssetOptimizer {
             return Ok(()); // Skip if already generated
         }
         
-        let encoder = webp::Encoder::from_image(&img)
+        let encoder = webp::Encoder::from_image(img)
             .map_err(|_| AssetError::WebPEncode)?;
             
         let webp_memory = encoder.encode(85.0); // 85% quality
