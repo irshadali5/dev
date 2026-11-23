@@ -1,0 +1,12 @@
+ProjectMetadata(
+    slug: "vector-simd-search",
+    title: "VectorSIMD: High-Dimensional Vector Search",
+    description: "Concurrent in-memory vector database and approximate nearest neighbor (ANN) search engine implementing Hierarchical Navigable Small World (HNSW) graphs and AVX-512/NEON SIMD cosine metrics.",
+    tags: ["Rust", "Vector Search", "HNSW", "SIMD", "AVX-512", "AI Infrastructure", "Algorithms"],
+    created_at: "2026-04-18T00:00:00Z",
+    github_url: Some("https://github.com/irshadali5/vectorsimd"),
+    live_url: None,
+    architecture: Some("Multi-layer Hierarchical Navigable Small World (HNSW) graph indexing with vectorized AVX-512 / ARM NEON distance calculation kernels, lock-free concurrent edge insertion, and scalar quantization (SQ8)."),
+    benchmarks: Some("99.4% Recall@10 at 85,000 QPS (1536-dimension OpenAI embeddings); AVX-512 SIMD metric kernel is 7.8x faster than scalar auto-vectorization; 4x memory compression with SQ8."),
+    lessons_learned: Some("Manual AVX-512 FMA instruction unrolling combined with prefetching next-node vector buffers eliminates CPU pipeline memory stalls during graph traversal."),
+)
