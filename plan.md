@@ -1,6 +1,6 @@
 For a developer website intended to last for years rather than months, I would avoid treating it as a simple "portfolio." Instead, treat it as a personal publishing platform—a Rust application that happens to expose a portfolio, technical blog, digital library, and knowledge base from a single system.
 
-For dev.irshad.org.in, the architecture should optimize for:
+For irshadali.org, the architecture should optimize for:
 
 Pure Rust
 High performance
@@ -17,7 +17,7 @@ High-Level Architecture
                      HTTPS (TLS)
                              │
                     Reverse Proxy
-               (Caddy / Nginx / Traefik)
+             (Pingap: Pure Rust / Pingora)
                              │
                 ┌──────────────────────┐
                 │      Axum Server     │
