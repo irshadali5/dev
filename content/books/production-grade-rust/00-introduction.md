@@ -15,7 +15,7 @@ An **email newsletter API** — the same project structure used by companies lik
 *   An admin dashboard with session-based auth
 *   Background workers for newsletter delivery
 *   Full observability with structured logging
-*   Docker containerization and CI/CD
+*   Kiri (Rust container runtime) containerization and CI/CD
 
 ## The 2026 Stack
 
