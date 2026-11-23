@@ -1,0 +1,12 @@
+ProjectMetadata(
+    slug: "zero-copy-proxy",
+    title: "AeroProxy: Zero-Copy Async Reverse Proxy",
+    description: "Ultra-high-throughput Layer-7 HTTP/1.1 & HTTP/2 reverse proxy and load balancer leveraging Linux io_uring/epoll, zero-copy kernel splicing, and SIMD protocol parsers.",
+    tags: ["Rust", "Networking", "io_uring", "Zero-Copy", "SIMD", "Load Balancing", "Linux"],
+    created_at: "2026-06-20T00:00:00Z",
+    github_url: Some("https://github.com/irshadali5/aeroproxy"),
+    live_url: None,
+    architecture: Some("Thread-per-core actor model with Linux io_uring SQPOLL ring submission, SIMD-accelerated HTTP header tokenization, adaptive weighted round-robin upstream routing, and lock-free circuit breaking."),
+    benchmarks: Some("1,850,000 requests/sec on single bare-metal server; P99 latency < 180μs; 65% lower CPU utilization than standard NGINX under 100k persistent TLS connections."),
+    lessons_learned: Some("Direct kernel splice operations between TCP sockets eliminate userspace buffer copies, but require careful handling of partial writes and dynamic TCP window resizing."),
+)
