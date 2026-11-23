@@ -55,7 +55,7 @@ fn main() {
         
         let temp_md = format!("/tmp/clap_{}.md", i);
         Command::new("pandoc")
-            .args(&[&temp_html, "-f", "html", "-t", "gfm", "-o", &temp_md])
+            .args(["-i", &temp_html, "-f", "html", "-t", "gfm", "-o", &temp_md])
             .status()
             .unwrap();
             
@@ -76,7 +76,7 @@ fn main() {
         let mut final_md = String::new();
         for line in md.lines() {
             if line.starts_with(">") && !line.starts_with("> [!") && line.len() > 1 && !line.starts_with(">  ") {
-                final_md.push_str(&format!("> {}\n", &line[1..].trim_start()));
+                final_md.push_str(&format!("> {}\n", line[1..].trim_start()));
             } else {
                 final_md.push_str(line);
                 final_md.push('\n');
