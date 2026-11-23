@@ -1,8 +1,8 @@
 use chrono::{Duration, Utc};
 use database::repositories::UserRepository;
-use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation};
+use database::DatabaseConnection;
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -11,7 +11,7 @@ use crate::crypto::{verify_password, CryptoError};
 #[derive(Error, Debug)]
 pub enum AuthError {
     #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
+    Database(String),
     #[error("Invalid credentials")]
     InvalidCredentials,
     #[error("JWT error: {0}")]
@@ -33,9 +33,9 @@ pub struct AuthService {
 }
 
 impl AuthService {
-    pub fn new(pool: SqlitePool, jwt_secret: String) -> Self {
+    pub fn new(conn: DatabaseConnection, jwt_secret: String) -> Self {
         Self {
-            repo: UserRepository::new(pool),
+            repo: UserRepository::new(conn),
             jwt_secret,
         }
     }
@@ -44,7 +44,8 @@ impl AuthService {
         let user = self
             .repo
             .get_user_by_email(email)
-            .await?
+            .await
+            .map_err(|e| AuthError::Database(e.to_string()))?
             .ok_or(AuthError::InvalidCredentials)?;
 
         verify_password(password, &user.password_hash)?;
