@@ -44,3 +44,11 @@ content/.search_index/
 /database/data/
 /database/dev_site.db/
 
+# Deploy staging build artifacts
+/deploy/server
+/deploy/site/
+/deploy/content/
+/deploy/data/
+/deploy/dev_site.db
+
+
