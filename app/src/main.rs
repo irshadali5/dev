@@ -90,6 +90,13 @@ async fn main() {
             let conn = conn.clone();
             move || server::metrics_handler(axum::extract::State(conn.clone()))
         }))
+        .route("/api/v1/articles", axum::routing::get(server::api_v1_articles_handler))
+        .route("/api/v1/articles/:slug", axum::routing::get(server::api_v1_article_detail_handler))
+        .route("/api/v1/projects", axum::routing::get(server::api_v1_projects_handler))
+        .route("/api/v1/books", axum::routing::get(server::api_v1_books_handler))
+        .route("/api/v1/skills", axum::routing::get(server::api_v1_skills_handler))
+        .route("/api/v1/stats", axum::routing::get(server::api_v1_stats_handler))
+        .route("/api/v1/openapi.json", axum::routing::get(server::api_v1_openapi_handler))
         .nest_service("/pkg", tower_http::services::ServeDir::new(format!("{}/pkg", leptos_options.site_root)))
         .leptos_routes_with_context(&leptos_options, routes, {
             let conn = conn.clone();
