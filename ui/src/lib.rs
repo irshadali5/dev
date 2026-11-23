@@ -9,11 +9,34 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     
-    let (theme, set_theme) = create_signal("light".to_string());
+    let (theme, set_theme) = create_signal("dark".to_string());
     
+    // Theme initialization & sync on client
+    create_effect(move |_| {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(Some(storage)) = win.local_storage() {
+                    if let Ok(Some(saved)) = storage.get_item("theme") {
+                        set_theme.set(saved);
+                    }
+                }
+            }
+        }
+    });
+
     let toggle_theme = move |_| {
         set_theme.update(|t| {
-            *t = if t == "dark" { "light".to_string() } else { "dark".to_string() };
+            let next = if t == "dark" { "light".to_string() } else { "dark".to_string() };
+            #[cfg(not(feature = "ssr"))]
+            {
+                if let Some(win) = web_sys::window() {
+                    if let Ok(Some(storage)) = win.local_storage() {
+                        let _ = storage.set_item("theme", &next);
+                    }
+                }
+            }
+            *t = next;
         });
     };
 
@@ -22,16 +45,61 @@ pub fn App() -> impl IntoView {
         set_menu_open.update(|open| *open = !*open);
     };
 
+    let (is_palette_open, set_palette_open) = create_signal(false);
+
+    // Global keyboard shortcut: Cmd+K / Ctrl+K / Escape
+    let _ = window_event_listener(ev::keydown, move |ev: web_sys::KeyboardEvent| {
+        let key = ev.key();
+        if (ev.meta_key() || ev.ctrl_key()) && (key == "k" || key == "K") {
+            ev.prevent_default();
+            set_palette_open.update(|open| *open = !*open);
+        } else if key == "Escape" {
+            set_palette_open.set(false);
+        }
+    });
+
     view! {
         <Html lang="en" attr:data-theme=move || theme.get()/>
         <Stylesheet id="leptos" href="/pkg/dev-site.css"/>
         <Title text="Irshad - Developer & Writer"/>
+        <Meta name="description" content="Irshad Ali — Software Engineer & Systems Architect. High-Performance Distributed Systems, Rust, and Cloud Architecture."/>
+        <Meta property="og:site_name" content="Irshad Ali"/>
+        <Meta property="og:type" content="website"/>
+        <Meta property="og:title" content="Irshad Ali — Software Engineer & Systems Architect"/>
+        <Meta property="og:description" content="High-Performance Distributed Systems, Rust, and Cloud Architecture."/>
+        <Meta property="og:image" content="/api/og"/>
+        <Meta name="twitter:card" content="summary_large_image"/>
+        <Meta name="twitter:creator" content="@irshadali5"/>
+        <Meta name="twitter:title" content="Irshad Ali — Software Engineer & Systems Architect"/>
+        <Meta name="twitter:description" content="High-Performance Distributed Systems, Rust, and Cloud Architecture."/>
+        <Meta name="twitter:image" content="/api/og"/>
+        <Link rel="alternate" type_="application/rss+xml" title="Irshad RSS Feed" href="/rss.xml"/>
+        <Link rel="alternate" type_="application/atom+xml" title="Irshad Atom Feed" href="/atom.xml"/>
+        <Link rel="alternate" type_="application/feed+json" title="Irshad JSON Feed" href="/feed.json"/>
+        <Link rel="manifest" href="/manifest.json"/>
+        
+        // Zero-FOUC inline theme script
+        <Script>
+            "try { const t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); document.documentElement.setAttribute('data-theme', t); } catch(e) {}"
+        </Script>
+        
         // Highlight.js
         <Link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"/>
         <Script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"/>
-        <Script>"document.addEventListener('DOMContentLoaded', (event) => { document.querySelectorAll('pre code').forEach((block) => { hljs.highlightElement(block); }); });"</Script>
+        <Script>"document.addEventListener('DOMContentLoaded', () => { document.querySelectorAll('pre code').forEach((block) => { hljs.highlightElement(block); }); });"</Script>
+
+        // KaTeX Math
+        <Link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
+        <Script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"/>
+        <Script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"/>
+        <Script>"document.addEventListener('DOMContentLoaded', () => { if (window.renderMathInElement) { renderMathInElement(document.body, { delimiters: [ {left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false} ] }); } });"</Script>
+
+        // Mermaid Diagrams
+        <Script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"/>
+        <Script>"document.addEventListener('DOMContentLoaded', () => { if (window.mermaid) { mermaid.initialize({ startOnLoad: true, theme: 'dark' }); } });"</Script>
 
         <Router>
+            <CommandPalette is_open=is_palette_open set_open=set_palette_open/>
             <nav class="navbar" id="navbar">
                 <div class="nav-container">
                     <A href="/" class="nav-logo">
@@ -40,11 +108,22 @@ pub fn App() -> impl IntoView {
                     <div class=move || format!("nav-links {}", if is_menu_open.get() { "open" } else { "" }) id="navLinks">
                         <A href="/" class="nav-link" active_class="active" exact=true on:click=move |_| set_menu_open.set(false)>"Home"</A>
                         <A href="/projects" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Portfolio"</A>
+                        <A href="/experience" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Experience"</A>
                         <A href="/articles" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Articles"</A>
                         <A href="/books" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Books"</A>
+                        <A href="/tools" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Tools"</A>
                         <A href="/about" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"About"</A>
+                        <A href="/contact" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Contact"</A>
+                        <A href="/resume" class="nav-link" active_class="active" on:click=move |_| set_menu_open.set(false)>"Resume"</A>
                     </div>
                     <div class="nav-actions">
+                        <button class="theme-toggle" aria-label="Search Palette (Cmd+K)" style="margin-right: 4px; display: inline-flex; align-items: center; gap: 4px;" on:click=move |_| set_palette_open.set(true)>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <span class="cmd-palette-kbd" style="font-size: 0.65rem; padding: 1px 4px;">"⌘K"</span>
+                        </button>
                         <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" on:click=toggle_theme>
                             <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="5"></circle>
@@ -66,17 +145,29 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path="" view=HomePage/>
                     <Route path="about" view=AboutPage/>
+                    <Route path="contact" view=ContactPage/>
+                    <Route path="tools" view=ToolsPage/>
+                    <Route path="resume" view=ResumePage/>
+                    <Route path="experience" view=ExperiencePage/>
+                    <Route path="career" view=ExperiencePage/>
+                    <Route path="credentials" view=ExperiencePage/>
                     <Route path="search" view=SearchPage/>
                     <Route path="projects" view=ProjectsPage/>
+                    <Route path="projects/:slug" view=ProjectDetailPage/>
                     <Route path="books" view=BooksPage/>
                     <Route path="books/:slug" view=BookIndexPage/>
                     <Route path="books/:slug/:chapter" view=BookChapterPage/>
                     <Route path="articles" view=ArticlesPage/>
                     <Route path="articles/:slug" view=ArticlePage/>
+                    <Route path="writing" view=ArticlesPage/>
+                    <Route path="writing/:slug" view=ArticlePage/>
+                    <Route path="blog" view=ArticlesPage/>
+                    <Route path="blog/:slug" view=ArticlePage/>
                     <Route path="login" view=LoginPage/>
                     <Route path="admin" view=AdminDashboard>
                         <Route path="" view=AdminOverview/>
                         <Route path="analytics" view=AdminAnalytics/>
+                        <Route path="messages" view=AdminMessages/>
                         <Route path="portfolio" view=AdminPortfolio/>
                         <Route path="projects" view=AdminProjects/>
                         <Route path="articles" view=AdminArticles/>
@@ -124,6 +215,7 @@ pub fn App() -> impl IntoView {
                                     <A href="/articles" class="terminal-link">"drwxr-xr-x  articles/"</A>
                                     <A href="/books" class="terminal-link">"drwxr-xr-x  books/"</A>
                                     <A href="/about" class="terminal-link">"-rw-r--r--  about.md"</A>
+                                    <A href="/resume" class="terminal-link">"-rw-r--r--  resume.md"</A>
                                 </div>
                             </div>
                             <div class="terminal-block">
@@ -134,7 +226,7 @@ pub fn App() -> impl IntoView {
                                 <div class="terminal-output">
                                     <a href="https://github.com/irshadali5" target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 github.com:443 ESTABLISHED"</a>
                                     <a href="https://linkedin.com/in/irshadali" target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 linkedin.com:443 ESTABLISHED"</a>
-                                    <a href="mailto:hello@irshadali.dev" class="terminal-link">"tcp 0 0 smtp.mail:587 LISTENING"</a>
+                                    <a href="mailto:contact@irshadali.org" class="terminal-link">"tcp 0 0 smtp.mail:587 LISTENING"</a>
                                 </div>
                             </div>
                             <div class="terminal-block">
@@ -345,41 +437,333 @@ fn SkillsSection() -> impl IntoView {
 
 
 #[component]
+fn FeaturedProjectsSection() -> impl IntoView {
+    let projects_res = create_resource(|| (), |_| async move { api::get_projects().await.unwrap_or_default() });
+
+    view! {
+        <section class="page-section container" style="margin-top: 80px;">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <span class="section-label">"Selected Engineering Systems"</span>
+                    <h2 class="section-title">"Featured Architecture & Projects"</h2>
+                    <p class="section-subtitle">"Deep-dive into production-grade distributed consensus, embedded database engines, and zero-copy Linux networking."</p>
+                </div>
+                <A href="/projects" class="btn btn-secondary">
+                    "View All Projects &rarr;"
+                </A>
+            </div>
+
+            <Suspense fallback=move || view! { <div class="projects-grid"><div class="skeleton-loader project-card" style="height: 260px;"></div><div class="skeleton-loader project-card" style="height: 260px;"></div></div> }>
+                {move || projects_res.get().map(|projs| {
+                    let featured: Vec<_> = projs.into_iter().take(3).collect();
+                    view! {
+                        <div class="projects-grid">
+                            {featured.into_iter().map(|p| {
+                                let case_study_url = format!("/projects/{}", p.slug);
+                                view! {
+                                    <div class="project-card glass-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+                                        <div>
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                                <h3 class="project-title" style="margin: 0; font-size: 1.3rem;">
+                                                    <A href=case_study_url.clone()>{p.title}</A>
+                                                </h3>
+                                            </div>
+                                            <p class="project-desc" style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem; font-size: 0.95rem;">
+                                                {p.description}
+                                            </p>
+
+                                            {p.benchmarks.as_ref().map(|bench| view! {
+                                                <div class="project-spec-card" style="margin-bottom: 1.25rem; padding: 0.85rem 1rem;">
+                                                    <div class="project-spec-title">"⚡ Key Benchmark"</div>
+                                                    <div class="project-spec-value" style="font-size: 0.85rem; font-weight: 600; color: var(--accent);">{bench.clone()}</div>
+                                                </div>
+                                            })}
+
+                                            <div class="project-tags" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.5rem;">
+                                                {p.tags.into_iter().map(|t| view! {
+                                                    <span class="tag">{t}</span>
+                                                }).collect_view()}
+                                            </div>
+                                        </div>
+
+                                        <div class="project-links" style="display: flex; gap: 0.75rem; align-items: center; border-top: 1px solid var(--border); padding-top: 1rem; flex-wrap: wrap;">
+                                            <A href=case_study_url class="btn btn-primary">
+                                                "Case Study &rarr;"
+                                            </A>
+                                            {p.github_url.map(|url| view! { <a href=url target="_blank" class="project-link" style="font-size: 0.85rem;">"GitHub &nearr;"</a> })}
+                                        </div>
+                                    </div>
+                                }
+                            }).collect_view()}
+                        </div>
+                    }.into_view()
+                })}
+            </Suspense>
+        </section>
+    }
+}
+
+#[component]
+fn ArchitecturePillarsSection() -> impl IntoView {
+    view! {
+        <section class="page-section container" style="margin-top: 80px;">
+            <div class="section-header">
+                <span class="section-label">"Core Engineering Specialties"</span>
+                <h2 class="section-title">"Systems Architecture Pillars"</h2>
+                <p class="section-subtitle">"Architectural foundations built on memory safety, formal verification, low latency, and mechanical sympathy."</p>
+            </div>
+
+            <div class="architecture-bento">
+                <div class="bento-card">
+                    <div>
+                        <div class="bento-icon">"🏛️"</div>
+                        <h3 class="bento-title">"Distributed Consensus & Storage"</h3>
+                        <p class="bento-desc">"Building fault-tolerant linearizable state machines with Raft protocol, dynamic joint consensus membership, snapshot log compaction, and leader read leases."</p>
+                    </div>
+                    <ul class="bento-features">
+                        <li><span>"▹"</span> "Raft Consensus Algorithm"</li>
+                        <li><span>"▹"</span> "Dynamic Cluster Reconfiguration"</li>
+                        <li><span>"▹"</span> "Linearizable Read Leases"</li>
+                    </ul>
+                </div>
+
+                <div class="bento-card">
+                    <div>
+                        <div class="bento-icon">"⚡"</div>
+                        <h3 class="bento-title">"Embedded MVCC Database Engines"</h3>
+                        <p class="bento-desc">"Engineering pure-Rust ACID transactional storage engines featuring slotted-page B+ tree indexing, append-only WAL group commits, and lock-free snapshot isolation."</p>
+                    </div>
+                    <ul class="bento-features">
+                        <li><span>"▹"</span> "Multi-Version Concurrency (MVCC)"</li>
+                        <li><span>"▹"</span> "Slotted-Page B+ Tree Layouts"</li>
+                        <li><span>"▹"</span> "Group-Commit WAL Logging"</li>
+                    </ul>
+                </div>
+
+                <div class="bento-card">
+                    <div>
+                        <div class="bento-icon">"🚀"</div>
+                        <h3 class="bento-title">"Zero-Copy Linux Networking"</h3>
+                        <p class="bento-desc">"Eliminating user/kernel space memory copies through Linux io_uring SQPOLL ring submission, kernel TCP socket splicing, and SIMD HTTP/1.1 & HTTP/2 tokenizers."</p>
+                    </div>
+                    <ul class="bento-features">
+                        <li><span>"▹"</span> "Linux io_uring & epoll"</li>
+                        <li><span>"▹"</span> "Zero-Copy splice(2) Sockets"</li>
+                        <li><span>"▹"</span> "SIMD AVX2 Parser Kernels"</li>
+                    </ul>
+                </div>
+
+                <div class="bento-card">
+                    <div>
+                        <div class="bento-icon">"🔒"</div>
+                        <h3 class="bento-title">"Edge WASM & Vector Search"</h3>
+                        <p class="bento-desc">"Deploying sub-millisecond WebAssembly serverless sandboxes with capability-based security boundaries and HNSW vector databases accelerated by AVX-512 SIMD."</p>
+                    </div>
+                    <ul class="bento-features">
+                        <li><span>"▹"</span> "WASI Capability Security"</li>
+                        <li><span>"▹"</span> "HNSW Graph Vector Indexing"</li>
+                        <li><span>"▹"</span> "AVX-512 Distance Acceleration"</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    }
+}
+
+#[component]
+fn PublicationsPreviewSection() -> impl IntoView {
+    view! {
+        <section class="page-section container" style="margin-top: 80px;">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <span class="section-label">"Written Guides & Books"</span>
+                    <h2 class="section-title">"Engineering Manuals & Publications"</h2>
+                    <p class="section-subtitle">"Deep-dive technical books and long-form publications on production Rust architecture."</p>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <A href="/articles" class="btn btn-secondary">"All Articles &rarr;"</A>
+                    <A href="/books" class="btn btn-secondary">"All Books &rarr;"</A>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                <div class="glass-panel" style="padding: 2rem; border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <span class="experience-badge" style="margin-bottom: 1rem; display: inline-block;">"📖 Technical Book"</span>
+                        <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.75rem;">
+                            <A href="/books/production-grade-rust">"Production-Grade Rust"</A>
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                            "An extensive 30-chapter architectural guide to engineering mission-critical, high-throughput web backends, distributed consensus engines, and cloud infrastructure with modern Rust."
+                        </p>
+                    </div>
+                    <A href="/books/production-grade-rust" class="btn btn-primary">
+                        "Read Book Chapters &rarr;"
+                    </A>
+                </div>
+
+                <div class="glass-panel" style="padding: 2rem; border-radius: var(--radius-lg); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <span class="experience-badge" style="margin-bottom: 1rem; display: inline-block;">"📖 Technical Book"</span>
+                        <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.75rem;">
+                            <A href="/books/zero-to-production">"Zero to Production in Rust"</A>
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                            "Comprehensive foundations on cloud deployments, Hexagonal Architecture, type-driven state machines, structured logging with tracing, and CI/CD pipelines."
+                        </p>
+                    </div>
+                    <A href="/books/zero-to-production" class="btn btn-primary">
+                        "Read Book Chapters &rarr;"
+                    </A>
+                </div>
+            </div>
+        </section>
+    }
+}
+
+#[component]
 pub fn HomePage() -> impl IntoView {
-    let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
-
-
     view! {
         <section class="hero page-section container animate-slide-up">
             <div class="hero-content">
+                <div class="hero-focus-pills">
+                    <span class="hero-focus-pill"><span class="dot"></span> "Available for Principal Systems Roles"</span>
+                    <span class="hero-focus-pill">"⚡ Sub-millisecond P99"</span>
+                    <span class="hero-focus-pill">"🦀 Pure Rust & WASM"</span>
+                    <span class="hero-focus-pill">"🔒 ACID MVCC & Raft"</span>
+                </div>
                 <span class="section-label" style="display: inline-block;">"Hi, my name is"</span>
                 <h1 class="hero-title">
                     <span class="gradient-text">"Irshad Ali."</span>
                 </h1>
-                <h2 class="hero-subtitle" style="font-size: clamp(2rem, 5vw, 4rem); font-weight: 700; color: var(--text-secondary); margin-bottom: 2rem;">
-                    "I engineer reliable systems."
+                <h2 class="hero-subtitle" style="font-size: clamp(2rem, 5vw, 4rem); font-weight: 700; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    "I engineer reliable distributed systems."
                 </h2>
-                <p class="hero-subtitle">
-                    "I am a software engineer specializing in backend development, systems programming, and AI pipelines. I focus on writing high-performance, safe, and scalable code."
+                <p class="hero-subtitle" style="font-size: 1.2rem; line-height: 1.7; max-width: 760px;">
+                    "Systems architect specializing in high-throughput distributed database engines, zero-copy network proxies, and low-latency Rust infrastructure. I build safe, concurrent, and mechanically sympathetic backends."
                 </p>
-                <div class="hero-actions">
-                    <a href="#" class="btn btn-primary">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        "Download Resume"
-                    </a>
-                    <A href="/projects" class="btn btn-secondary">
-                        "View My Work"
+                <div class="hero-actions" style="margin-top: 2rem;">
+                    <A href="/projects" class="btn btn-primary">
+                        "Explore Systems & Projects &rarr;"
+                    </A>
+                    <A href="/experience" class="btn btn-secondary">
+                        "Career & Experience"
+                    </A>
+                    <A href="/tools" class="btn btn-secondary">
+                        "⚡ Systems Latency Tools"
                     </A>
                 </div>
             </div>
         </section>
         
+        <FeaturedProjectsSection />
+        <ArchitecturePillarsSection />
         <SkillsSection />
-        <TimelineSection label="Background" title="Experience" item_type_filter="experience" timeline_res=timeline_res />
-        <TimelineSection label="Achievements" title="Certifications & Courses" item_type_filter="certification" timeline_res=timeline_res />
-        <TimelineSection label="Background" title="Education" item_type_filter="education" timeline_res=timeline_res />
-
+        <PublicationsPreviewSection />
+        <GithubActivityFeed />
         <ContactForm />
+    }
+}
+
+#[component]
+pub fn ExperiencePage() -> impl IntoView {
+    let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
+    let (selected_filter, set_selected_filter) = create_signal("all".to_string());
+
+    view! {
+        <Title text="Experience & Career - Irshad Ali | Systems Architect"/>
+        <Meta name="description" content="Professional engineering background, distributed systems roles, cloud certifications, and academic degrees of Irshad Ali."/>
+
+        <div class="page-section container animate-fade-in">
+            <div class="section-header">
+                <span class="section-label">"Career & Credentials"</span>
+                <h1 class="section-title">"Experience, Certifications & Education"</h1>
+                <p class="section-subtitle">
+                    "Track record architecting fault-tolerant distributed engines, low-latency microservices, and high-performance computing infrastructure."
+                </p>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+                <div class="tag-filter-bar" style="margin-bottom: 0;">
+                    <button 
+                        class=move || format!("tag-chip {}", if selected_filter.get() == "all" { "active" } else { "" })
+                        on:click=move |_| set_selected_filter.set("all".to_string())
+                    >
+                        "All Records"
+                    </button>
+                    <button 
+                        class=move || format!("tag-chip {}", if selected_filter.get() == "experience" { "active" } else { "" })
+                        on:click=move |_| set_selected_filter.set("experience".to_string())
+                    >
+                        "💼 Work Experience"
+                    </button>
+                    <button 
+                        class=move || format!("tag-chip {}", if selected_filter.get() == "certification" { "active" } else { "" })
+                        on:click=move |_| set_selected_filter.set("certification".to_string())
+                    >
+                        "🏆 Certifications & Licenses"
+                    </button>
+                    <button 
+                        class=move || format!("tag-chip {}", if selected_filter.get() == "education" { "active" } else { "" })
+                        on:click=move |_| set_selected_filter.set("education".to_string())
+                    >
+                        "🎓 Education & Academics"
+                    </button>
+                </div>
+
+                <A href="/resume" class="btn btn-secondary">
+                    "📄 View Full Resume / CV &rarr;"
+                </A>
+            </div>
+
+            <Suspense fallback=move || view! { <div class="skeleton-loader glass-panel" style="height: 350px;"></div> }>
+                {move || timeline_res.get().map(|items| {
+                    let filter = selected_filter.get();
+                    let filtered: Vec<_> = items.into_iter().filter(|i| {
+                        if filter == "all" { true } else { i.item_type == filter }
+                    }).collect();
+
+                    if filtered.is_empty() {
+                        view! {
+                            <div class="glass-panel" style="padding: 3rem; text-align: center; color: var(--text-tertiary);">
+                                <p>"No records found matching this category."</p>
+                            </div>
+                        }.into_view()
+                    } else {
+                        view! {
+                            <div class="experience-timeline">
+                                {filtered.into_iter().map(|item| {
+                                    let badge_label = match item.item_type.as_str() {
+                                        "experience" => "Work Experience",
+                                        "certification" => "Certification",
+                                        "education" => "Academic Degree",
+                                        _ => "Credential",
+                                    };
+                                    view! {
+                                        <div class="experience-card">
+                                            <div class="experience-dot"></div>
+                                            <div class="experience-header">
+                                                <div>
+                                                    <h2 class="experience-org">{item.organization}</h2>
+                                                    <div class="experience-role">{item.title}</div>
+                                                </div>
+                                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                                    <span class="experience-badge">{badge_label}</span>
+                                                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-tertiary); font-family: var(--font-mono);">{item.period}</span>
+                                                </div>
+                                            </div>
+                                            <p style="color: var(--text-secondary); line-height: 1.7; font-size: 0.95rem; margin-top: 1rem;">
+                                                {item.description}
+                                            </p>
+                                        </div>
+                                    }
+                                }).collect_view()}
+                            </div>
+                        }.into_view()
+                    }
+                })}
+            </Suspense>
+        </div>
     }
 }
 
@@ -389,8 +773,151 @@ fn AboutPage() -> impl IntoView {
         <div class="page-section container animate-slide-up">
             <h1 class="page-title">"About Me"</h1>
             <div class="content-prose">
-                <p class="mb-4">"I build high-performance distributed systems and web applications, predominantly using Rust."</p>
-                <p>"This site itself is built using Leptos, Axum, and custom Vanilla CSS."</p>
+                <p class="mb-4">"I build high-performance distributed systems and web applications, predominantly using Rust, C++, and SQL."</p>
+                <p class="mb-4">"My core expertise centers around low-latency architectures, systems safety, database engines, and AI pipelines."</p>
+                <p>"This website itself is engineered with pure Rust using Leptos SSR, Axum, Tokio, and Tantivy full-text search."</p>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn ResumePage() -> impl IntoView {
+    let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
+    let skills_res = create_resource(|| (), |_| async move { api::get_skills().await.unwrap_or_default() });
+    let projects_res = create_resource(|| (), |_| async move { api::get_projects().await.unwrap_or_default() });
+
+    view! {
+        <Title text="Resume - Irshad Ali | Systems & AI Engineer"/>
+        <Meta name="description" content="Resume and Curriculum Vitae of Irshad Ali - Systems Engineer, C++, Rust, AI Pipelines."/>
+        
+        <div class="page-section container animate-slide-up" style="max-width: 900px;">
+            <div class="resume-card glass-panel" style="padding: 3rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 2rem; margin-bottom: 2rem;">
+                    <div>
+                        <h1 class="page-title" style="margin-bottom: 0.5rem; font-size: 2.75rem;">"Irshad Ali"</h1>
+                        <h2 style="font-size: 1.25rem; font-weight: 600; color: var(--accent); margin-bottom: 1rem;">"Systems Programmer & AI Engineer"</h2>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.95rem; color: var(--text-secondary);">
+                            <span>"📧 contact@irshadali.org"</span>
+                            <span>"•"</span>
+                            <span>"🌐 irshadali.org"</span>
+                            <span>"•"</span>
+                            <a href="https://github.com/irshadali5" target="_blank" rel="noopener" style="color: var(--accent);">"🐙 GitHub"</a>
+                            <span>"•"</span>
+                            <a href="https://linkedin.com/in/irshadali" target="_blank" rel="noopener" style="color: var(--accent);">"💼 LinkedIn"</a>
+                        </div>
+                    </div>
+                </div>
+
+                <section style="margin-bottom: 2.5rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">"Summary"</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.7;">
+                        "High-performance systems programmer specializing in Rust, C++, distributed architectures, and scalable AI infrastructure. Experienced in designing robust web services, database storage engines, and type-safe systems with zero-cost abstractions."
+                    </p>
+                </section>
+
+                <section style="margin-bottom: 2.5rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">"Technical Skills"</h3>
+                    <Suspense fallback=move || view! { <p class="text-muted">"Loading skills..."</p> }>
+                        {move || skills_res.get().map(|skills| {
+                            let mut categories: Vec<(String, Vec<domain::models::Skill>)> = Vec::new();
+                            for skill in skills {
+                                if let Some(pos) = categories.iter().position(|(c, _)| c == &skill.category) {
+                                    categories[pos].1.push(skill);
+                                } else {
+                                    categories.push((skill.category.clone(), vec![skill]));
+                                }
+                            }
+                            view! {
+                                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                    {categories.into_iter().map(|(cat, cat_skills)| {
+                                        let skill_names = cat_skills.into_iter().map(|s| s.name).collect::<Vec<_>>().join(", ");
+                                        view! {
+                                            <div style="font-size: 0.95rem;">
+                                                <strong style="color: var(--text-primary);">{cat}": "</strong>
+                                                <span style="color: var(--text-secondary);">{skill_names}</span>
+                                            </div>
+                                        }
+                                    }).collect_view()}
+                                </div>
+                            }
+                        })}
+                    </Suspense>
+                </section>
+
+                <section style="margin-bottom: 2.5rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">"Experience"</h3>
+                    <Suspense fallback=move || view! { <p class="text-muted">"Loading experience..."</p> }>
+                        {move || timeline_res.get().map(|items| {
+                            let exp: Vec<_> = items.into_iter().filter(|i| i.item_type == "experience").collect();
+                            view! {
+                                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                                    {exp.into_iter().map(|item| {
+                                        view! {
+                                            <div>
+                                                <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                                                    <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">{item.title} " — " <span style="color: var(--accent); font-weight: 600;">{item.organization}</span></h4>
+                                                    <span style="font-size: 0.85rem; color: var(--text-tertiary); font-weight: 600;">{item.period}</span>
+                                                </div>
+                                                <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;">{item.description}</p>
+                                            </div>
+                                        }
+                                    }).collect_view()}
+                                </div>
+                            }
+                        })}
+                    </Suspense>
+                </section>
+
+                <section style="margin-bottom: 2.5rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">"Featured Projects"</h3>
+                    <Suspense fallback=move || view! { <p class="text-muted">"Loading projects..."</p> }>
+                        {move || projects_res.get().map(|projs| {
+                            view! {
+                                <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                                    {projs.into_iter().map(|p| {
+                                        view! {
+                                            <div>
+                                                <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+                                                    <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">{p.title}</h4>
+                                                    <div style="display: flex; gap: 0.75rem; font-size: 0.85rem;">
+                                                        {p.github_url.map(|url| view! { <a href=url target="_blank" style="color: var(--accent); font-weight: 600;">"GitHub"</a> })}
+                                                        {p.live_url.map(|url| view! { <a href=url target="_blank" style="color: var(--accent); font-weight: 600;">"Live Demo"</a> })}
+                                                    </div>
+                                                </div>
+                                                <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin-top: 0.25rem;">{p.description}</p>
+                                            </div>
+                                        }
+                                    }).collect_view()}
+                                </div>
+                            }
+                        })}
+                    </Suspense>
+                </section>
+
+                <section>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">"Education & Certifications"</h3>
+                    <Suspense fallback=move || view! { <p class="text-muted">"Loading education..."</p> }>
+                        {move || timeline_res.get().map(|items| {
+                            let edu: Vec<_> = items.into_iter().filter(|i| i.item_type == "education" || i.item_type == "certification").collect();
+                            view! {
+                                <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                                    {edu.into_iter().map(|item| {
+                                        view! {
+                                            <div>
+                                                <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+                                                    <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary);">{item.title} " — " <span style="color: var(--accent);">{item.organization}</span></h4>
+                                                    <span style="font-size: 0.85rem; color: var(--text-tertiary);">{item.period}</span>
+                                                </div>
+                                                <p style="color: var(--text-secondary); font-size: 0.9rem;">{item.description}</p>
+                                            </div>
+                                        }
+                                    }).collect_view()}
+                                </div>
+                            }
+                        })}
+                    </Suspense>
+                </section>
             </div>
         </div>
     }
@@ -398,17 +925,23 @@ fn AboutPage() -> impl IntoView {
 
 #[component]
 fn ProjectsPage() -> impl IntoView {
-    let projects = create_resource(|| (), |_| async move { get_projects().await.unwrap_or_default() });
+    let projects = create_resource(|| (), |_| async move { api::get_projects().await.unwrap_or_default() });
+    let (selected_tag, set_selected_tag) = create_signal(Option::<String>::None);
 
     view! {
-        <Title text="Projects - Irshad"/>
-        <Meta name="description" content="Open source projects, libraries, and systems I've built."/>
+        <Title text="Portfolio & Distributed Systems - Irshad Ali"/>
+        <Meta name="description" content="Production distributed systems, embedded database engines, WebAssembly sandboxes, and low-latency benchmarks."/>
         <div class="page-section animate-fade-in container">
-            <h1 class="section-title">"Projects"</h1>
+            <div class="section-header">
+                <span class="section-label">"Systems Engineering & Architecture"</span>
+                <h1 class="section-title">"Featured Work & Systems"</h1>
+                <p class="section-subtitle">"Production engineering, distributed consensus, embedded database engines, and performance benchmarks."</p>
+            </div>
+            
             <Transition fallback=move || view! { 
                 <div class="projects-grid">
-                    <div class="skeleton-loader project-card" style="height: 180px;"></div>
-                    <div class="skeleton-loader project-card" style="height: 180px;"></div>
+                    <div class="skeleton-loader project-card" style="height: 220px;"></div>
+                    <div class="skeleton-loader project-card" style="height: 220px;"></div>
                 </div> 
             }>
                 {move || {
@@ -416,34 +949,173 @@ fn ProjectsPage() -> impl IntoView {
                         if projs.is_empty() {
                             view! { <p class="text-muted">"No projects found."</p> }.into_view()
                         } else {
+                            let mut tags_set = std::collections::BTreeSet::new();
+                            for p in &projs {
+                                for t in &p.tags {
+                                    tags_set.insert(t.clone());
+                                }
+                            }
+                            let tags_list: Vec<String> = tags_set.into_iter().collect();
+
+                            let active_tag = selected_tag.get();
+                            let filtered: Vec<_> = projs.into_iter().filter(|p| {
+                                match &active_tag {
+                                    Some(tag) => p.tags.contains(tag),
+                                    None => true,
+                                }
+                            }).collect();
+
                             view! {
-                                <div class="projects-grid">
-                                    {projs.into_iter().map(|p| view! {
-                                        <div class="project-card">
-                                            <div class="project-content">
-                                                <h2 class="project-title">{p.title}</h2>
-                                                <p class="project-desc">{p.description}</p>
-                                                <div class="project-tags">
-                                                    {p.tags.into_iter().map(|t| view! {
-                                                        <span class="tag">{t}</span>
-                                                    }).collect_view()}
-                                                </div>
-                                                <div class="project-links">
-                                                    {if let Some(url) = p.github_url {
-                                                        Some(view! { <a href=url target="_blank" class="project-link">"GitHub"</a> })
-                                                    } else { None }}
-                                                    {if let Some(url) = p.live_url {
-                                                        Some(view! { <a href=url target="_blank" class="project-link">"Live Demo"</a> })
-                                                    } else { None }}
-                                                </div>
+                                <div>
+                                    <div class="tag-filter-bar">
+                                        <button 
+                                             class=move || format!("tag-chip {}", if selected_tag.get().is_none() { "active" } else { "" })
+                                            on:click=move |_| set_selected_tag.set(None)
+                                        >
+                                            "All Projects"
+                                        </button>
+                                        {tags_list.into_iter().map(|tag| {
+                                            let tag_for_click = tag.clone();
+                                            let tag_for_active = tag.clone();
+                                            view! {
+                                                <button 
+                                                    class=move || format!("tag-chip {}", if selected_tag.get().as_deref() == Some(&tag_for_active) { "active" } else { "" })
+                                                    on:click=move |_| set_selected_tag.set(Some(tag_for_click.clone()))
+                                                >
+                                                    {tag}
+                                                </button>
+                                            }
+                                        }).collect_view()}
+                                    </div>
+
+                                    {if filtered.is_empty() {
+                                        view! { <p class="text-muted" style="padding: 2rem 0;">"No projects found matching this tag."</p> }.into_view()
+                                    } else {
+                                        view! {
+                                            <div class="projects-grid">
+                                                {filtered.into_iter().map(|p| {
+                                                    let has_case_study = !p.content_html.is_empty();
+                                                    let case_study_url = format!("/projects/{}", p.slug);
+                                                    view! {
+                                                        <div class="project-card glass-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
+                                                            <div class="project-content">
+                                                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                                                    <h2 class="project-title" style="margin: 0; font-size: 1.3rem;">
+                                                                        {if has_case_study {
+                                                                            view! { <A href=case_study_url.clone()>{p.title}</A> }.into_view()
+                                                                        } else {
+                                                                            view! { <span>{p.title}</span> }.into_view()
+                                                                        }}
+                                                                    </h2>
+                                                                </div>
+                                                                <p class="project-desc" style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.25rem; font-size: 0.95rem;">{p.description}</p>
+                                                                
+                                                                {p.benchmarks.as_ref().map(|bench| view! {
+                                                                    <div class="project-spec-card" style="margin-bottom: 1.25rem; padding: 0.85rem 1rem;">
+                                                                        <div class="project-spec-title">"⚡ Verified Benchmark"</div>
+                                                                        <div class="project-spec-value" style="font-size: 0.85rem; font-weight: 600; color: var(--accent);">{bench.clone()}</div>
+                                                                    </div>
+                                                                })}
+
+                                                                <div class="project-tags" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.5rem;">
+                                                                    {p.tags.into_iter().map(|t| view! {
+                                                                        <span class="tag">{t}</span>
+                                                                    }).collect_view()}
+                                                                </div>
+                                                            </div>
+                                                            <div class="project-links" style="display: flex; gap: 0.75rem; align-items: center; border-top: 1px solid var(--border); padding-top: 1rem; flex-wrap: wrap;">
+                                                                {if has_case_study {
+                                                                    Some(view! { <A href=case_study_url class="btn btn-primary">"Case Study &rarr;"</A> })
+                                                                } else { None }}
+                                                                {p.github_url.map(|url| view! { <a href=url target="_blank" class="project-link" style="font-size: 0.85rem;">"GitHub &nearr;"</a> })}
+                                                                {p.live_url.map(|url| view! { <a href=url target="_blank" class="project-link" style="font-size: 0.85rem;">"Live Demo &nearr;"</a> })}
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }).collect_view()}
                                             </div>
-                                        </div>
-                                    }).collect_view()}
+                                        }.into_view()
+                                    }}
                                 </div>
                             }.into_view()
                         }
                     })
                 }}
+            </Transition>
+        </div>
+    }
+}
+
+#[component]
+fn ProjectDetailPage() -> impl IntoView {
+    let params = use_params_map();
+    let slug = move || params.with(|p| p.get("slug").cloned().unwrap_or_default());
+    
+    let project = create_resource(slug, |s| async move {
+        if s.is_empty() { return None; }
+        api::get_project(s).await.ok()
+    });
+
+    view! {
+        <div class="page-section animate-fade-in container" style="max-width: 960px;">
+            <div style="margin-bottom: 1.5rem;">
+                <A href="/projects" class="btn btn-secondary">
+                    "&larr; Back to Projects"
+                </A>
+            </div>
+
+            <Transition fallback=move || view! { <div class="skeleton-loader glass-panel" style="height: 300px;"></div> }>
+                {move || project.get().flatten().map(|p| {
+                    view! {
+                        <div class="project-case-study">
+                            <Title text=format!("{} - Architecture & Case Study", p.title)/>
+                            <Meta name="description" content=p.description.clone()/>
+                            <div class="glass-panel" style="padding: 2.5rem; margin-bottom: 2rem;">
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                                    {p.tags.into_iter().map(|t| view! { <span class="tag">{t}</span> }).collect_view()}
+                                </div>
+                                <h1 class="section-title" style="margin-bottom: 0.75rem;">{p.title}</h1>
+                                <p class="text-muted" style="font-size: 1.15rem; line-height: 1.7; margin-bottom: 1.5rem;">{p.description}</p>
+                                
+                                <div class="project-spec-grid">
+                                    {p.architecture.as_ref().map(|arch| view! {
+                                        <div class="project-spec-card">
+                                            <div class="project-spec-title">"🏛️ Architecture Model"</div>
+                                            <div class="project-spec-value" style="font-size: 0.95rem; font-weight: 500; font-family: var(--font-sans);">{arch.clone()}</div>
+                                        </div>
+                                    })}
+
+                                    {p.benchmarks.as_ref().map(|bench| view! {
+                                        <div class="project-spec-card">
+                                            <div class="project-spec-title">"⚡ Performance & Benchmarks"</div>
+                                            <div class="project-spec-value" style="font-size: 0.95rem; font-weight: 500; font-family: var(--font-sans); color: var(--accent);">{bench.clone()}</div>
+                                        </div>
+                                    })}
+
+                                    {p.lessons_learned.as_ref().map(|lessons| view! {
+                                        <div class="project-spec-card">
+                                            <div class="project-spec-title">"💡 Invariants & Lessons"</div>
+                                            <div class="project-spec-value" style="font-size: 0.95rem; font-weight: 500; font-family: var(--font-sans);">{lessons.clone()}</div>
+                                        </div>
+                                    })}
+                                </div>
+
+                                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+                                    {p.github_url.map(|url| view! { <a href=url target="_blank" class="btn btn-primary">"View on GitHub &nearr;"</a> })}
+                                    {p.live_url.map(|url| view! { <a href=url target="_blank" class="btn btn-secondary">"Live Demo &nearr;"</a> })}
+                                </div>
+                            </div>
+
+                            {if !p.content_html.is_empty() {
+                                view! {
+                                    <article class="markdown-body glass-panel" style="padding: 3rem;" inner_html=p.content_html/>
+                                }.into_view()
+                            } else {
+                                view! { <div></div> }.into_view()
+                            }}
+                        </div>
+                    }
+                })}
             </Transition>
         </div>
     }
@@ -499,6 +1171,7 @@ fn BooksPage() -> impl IntoView {
 #[component]
 fn ArticlesPage() -> impl IntoView {
     let articles = create_resource(|| (), |_| async move { get_articles().await.unwrap_or_default() });
+    let (selected_tag, set_selected_tag) = create_signal(Option::<String>::None);
 
     view! {
         <Title text="Articles - Irshad"/>
@@ -517,39 +1190,149 @@ fn ArticlesPage() -> impl IntoView {
                 </div> 
             }>
                 {move || {
-                    articles.get().map(|articles| {
-                        if articles.is_empty() {
+                    articles.get().map(|all_articles| {
+                        if all_articles.is_empty() {
                             view! { <p class="text-muted">"No articles found."</p> }.into_view()
                         } else {
+                            let mut tags_set = std::collections::BTreeSet::new();
+                            for a in &all_articles {
+                                for t in &a.tags {
+                                    tags_set.insert(t.clone());
+                                }
+                            }
+                            let tags_list: Vec<String> = tags_set.into_iter().collect();
+
+                            let active_tag = selected_tag.get();
+                            let filtered: Vec<_> = all_articles.into_iter().filter(|a| {
+                                match &active_tag {
+                                    Some(tag) => a.tags.contains(tag),
+                                    None => true,
+                                }
+                            }).collect();
+
                             view! {
-                                <div class="articles-list">
-                                    {articles.into_iter().map(|a| {
-                                        let slug = a.slug.clone();
+                                <div>
+                                    <div class="tag-filter-bar">
+                                        <button 
+                                            class=move || format!("tag-chip {}", if selected_tag.get().is_none() { "active" } else { "" })
+                                            on:click=move |_| set_selected_tag.set(None)
+                                        >
+                                            "All Articles"
+                                        </button>
+                                        {tags_list.into_iter().map(|tag| {
+                                            let tag_for_click = tag.clone();
+                                            let tag_for_active = tag.clone();
+                                            view! {
+                                                <button 
+                                                    class=move || format!("tag-chip {}", if selected_tag.get().as_deref() == Some(&tag_for_active) { "active" } else { "" })
+                                                    on:click=move |_| set_selected_tag.set(Some(tag_for_click.clone()))
+                                                >
+                                                    {tag}
+                                                </button>
+                                            }
+                                        }).collect_view()}
+                                    </div>
+
+                                    {if filtered.is_empty() {
+                                        view! { <p class="text-muted" style="padding: 2rem 0;">"No articles found matching this tag."</p> }.into_view()
+                                    } else {
                                         view! {
-                                            <article class="article-card animate-slide-up">
-                                                <div class="article-meta">
-                                                    <span>"Article"</span>
-                                                    <span class="dot">"•"</span>
-                                                    <span><time>{a.created_at.to_rfc3339()}</time></span>
-                                                </div>
-                                                <h2 class="article-title"><A href=format!("/writing/{}", slug)>
-                                                    {a.title}
-                                                </A></h2>
-                                                <p class="article-excerpt">{a.description}</p>
-                                                <div class="article-tags">
-                                                    {a.tags.into_iter().map(|t| view! {
-                                                        <span class="tag">{t}</span>
-                                                    }).collect_view()}
-                                                </div>
-                                            </article>
-                                        }
-                                    }).collect_view()}
+                                            <div class="articles-list">
+                                                {filtered.into_iter().map(|a| {
+                                                    let slug = a.slug.clone();
+                                                    view! {
+                                                        <article class="article-card animate-slide-up">
+                                                            <div class="article-meta">
+                                                                <span>"Article"</span>
+                                                                <span class="dot">"•"</span>
+                                                                <span><time>{a.created_at.to_rfc3339()}</time></span>
+                                                            </div>
+                                                            <h2 class="article-title"><A href=format!("/articles/{}", slug)>
+                                                                {a.title}
+                                                            </A></h2>
+                                                            <p class="article-excerpt">{a.description}</p>
+                                                            <div class="article-tags">
+                                                                {a.tags.into_iter().map(|t| view! {
+                                                                    <span class="tag">{t}</span>
+                                                                }).collect_view()}
+                                                            </div>
+                                                        </article>
+                                                    }
+                                                }).collect_view()}
+                                            </div>
+                                        }.into_view()
+                                    }}
                                 </div>
                             }.into_view()
                         }
                     })
                 }}
             </Transition>
+
+            <div class="newsletter-card glass-panel" style="margin-top: 3.5rem; padding: 2.5rem; text-align: center; border-radius: var(--radius-lg);">
+                <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">"Subscribe to Systems & Rust Dispatch"</h3>
+                <p class="text-muted" style="max-width: 520px; margin: 0 auto 1.5rem auto; line-height: 1.6;">"Receive occasional deep dives on Rust systems engineering, performance optimization, and architectural blueprints. Zero spam."</p>
+                <NewsletterForm/>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn NewsletterForm() -> impl IntoView {
+    let (email, set_email) = create_signal(String::new());
+    let (submitted, set_submitted) = create_signal(false);
+    let (err, set_err) = create_signal(String::new());
+
+    let subscribe_action = create_action(move |em: &String| {
+        let em = em.clone();
+        async move {
+            api::subscribe_newsletter(em).await
+        }
+    });
+
+    view! {
+        <div>
+            {move || if submitted.get() {
+                view! {
+                    <p style="color: var(--accent); font-weight: 600; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: var(--radius-md); max-width: 400px; margin: 0 auto;">
+                        "&check; You're subscribed to the newsletter!"
+                    </p>
+                }.into_view()
+            } else {
+                view! {
+                    <form on:submit=move |ev| {
+                        ev.prevent_default();
+                        let val = email.get();
+                        if !val.is_empty() && val.contains('@') {
+                            subscribe_action.dispatch(val);
+                            set_submitted.set(true);
+                            set_err.set(String::new());
+                        } else {
+                            set_err.set("Please enter a valid email address".to_string());
+                        }
+                    } style="display: flex; gap: 0.5rem; justify-content: center; max-width: 440px; margin: 0 auto; flex-wrap: wrap;">
+                        <input 
+                            type="email" 
+                            class="form-input" 
+                            placeholder="your.email@domain.com" 
+                            required=true 
+                            style="flex: 1; min-width: 220px;"
+                            prop:value=email
+                            on:input=move |ev| set_email.set(event_target_value(&ev))
+                        />
+                        <button type="submit" class="btn btn-primary" style="white-space: nowrap;">"Subscribe"</button>
+                    </form>
+                }.into_view()
+            }}
+            {move || {
+                let error = err.get();
+                if !error.is_empty() {
+                    view! { <p style="color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem;">{error}</p> }.into_view()
+                } else {
+                    view! { <span></span> }.into_view()
+                }
+            }}
         </div>
     }
 }
@@ -563,6 +1346,7 @@ fn ArticlePage() -> impl IntoView {
     let article = create_resource(slug, |s| async move { get_article(s).await.ok() });
     
     view! {
+        <ReadingProgressBar/>
         <div class="page-section max-w-3xl animate-fade-in">
             <Transition fallback=move || view! { 
                 <div class="max-w-3xl mx-auto">
@@ -587,17 +1371,34 @@ fn ArticlePage() -> impl IntoView {
                                 });
                 
                                 view! {
-                                    <Title text=art.title.clone() />
+                                    <Title text=format!("{} - Irshad", art.title) />
                                     <Meta name="description" content=art.description.clone().unwrap_or_default() />
+                                    <Meta property="og:type" content="article" />
+                                    <Meta property="og:title" content=art.title.clone() />
+                                    <Meta property="og:description" content=art.description.clone().unwrap_or_default() />
+                                    <Meta name="twitter:title" content=art.title.clone() />
+                                    <Meta name="twitter:description" content=art.description.clone().unwrap_or_default() />
                                     <article class="article-full container">
                                         <header class="article-header">
-                                            <h1 class="article-main-title">{art.title}</h1>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+                                                <A href="/articles" class="btn btn-secondary">"&larr; All Articles"</A>
+                                                <BookmarkButton 
+                                                    slug=art.slug.clone() 
+                                                    title=art.title.clone() 
+                                                    doc_type="Article".to_string() 
+                                                    url=format!("/articles/{}", art.slug) 
+                                                />
+                                            </div>
+                                            <h1 class="article-main-title">{art.title.clone()}</h1>
                                             <div class="article-meta-row">
                                                 <time>{art.created_at.to_rfc3339()}</time>
                                                 <span class="dot">"•"</span>
                                                 <span>{views} " views"</span>
                                             </div>
                                         </header>
+
+                                        <AudioReader content_selector=".article-content"/>
+
                                         <div class="article-content prose" inner_html=art.body></div>
                                         
                                         <footer class="article-footer">
@@ -608,7 +1409,7 @@ fn ArticlePage() -> impl IntoView {
                                             </div>
                                             
                                             <div class="article-nav">
-                                                <A href="/writing" class="back-link">"← Back to Writing"</A>
+                                                <A href="/articles" class="back-link">"← Back to Articles"</A>
                                             </div>
                                         </footer>
                                     </article>
@@ -763,15 +1564,22 @@ pub fn SearchPage() -> impl IntoView {
                                         view! {
                                             <ul class="search-results-list">
                                                 {results.into_iter().map(|r| {
-                                                    let url = format!("/{}s/{}", r.doc_type, r.slug);
+                                                    let url = if r.slug.starts_with('/') {
+                                                        r.slug
+                                                    } else {
+                                                        format!("/{}", r.slug)
+                                                    };
                                                     view! {
-                                                        <li class="search-result-card glass-panel">
-                                                            <a href=url class="search-result-layout">
-                                                                <div>
-                                                                    <h3 class="search-result-title">{r.title}</h3>
-                                                                    <p class="search-result-snippet">{r.snippet}</p>
+                                                        <li class="search-result-card glass-panel" style="margin-bottom: 1rem;">
+                                                            <a href=url class="search-result-layout" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; gap: 1rem;">
+                                                                <div style="flex: 1;">
+                                                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                                                        <span class="tag" style="font-size: 0.75rem; padding: 2px 8px;">{r.doc_type}</span>
+                                                                        <h3 class="search-result-title" style="margin: 0; font-size: 1.2rem;">{r.title}</h3>
+                                                                    </div>
+                                                                    <p class="search-result-snippet" inner_html=r.snippet style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6;"></p>
                                                                 </div>
-                                                                <span class="search-result-type">{r.doc_type}</span>
+                                                                <span style="color: var(--accent); font-weight: 700;">"&rarr;"</span>
                                                             </a>
                                                         </li>
                                                     }
@@ -831,6 +1639,7 @@ pub fn AdminDashboard() -> impl IntoView {
                     <ul class="admin-sidebar-menu">
                         <li><A href="/admin" exact=true class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Overview"</A></li>
                         <li><A href="/admin/analytics" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Analytics"</A></li>
+                        <li><A href="/admin/messages" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Messages"</A></li>
                         <li><A href="/admin/portfolio" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Portfolio"</A></li>
                         <li><A href="/admin/projects" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Projects"</A></li>
                         <li><A href="/admin/articles" class="admin-nav-link" active_class="bg-brand-500/20 text-brand-400 font-medium">"Articles"</A></li>
@@ -1366,26 +2175,40 @@ pub fn BookIndexPage() -> impl IntoView {
     });
 
     view! {
-        <div class="page-section animate-fade-in container">
-            <Transition fallback=move || view! { <div class="skeleton-loader" style="height: 200px;"></div> }>
+        <div class="page-section animate-fade-in container" style="max-width: 900px;">
+            <div style="margin-bottom: 1.5rem;">
+                <A href="/books" class="btn btn-secondary">
+                    "&larr; Back to Books"
+                </A>
+            </div>
+            
+            <Transition fallback=move || view! { <div class="skeleton-loader glass-panel" style="height: 200px;"></div> }>
                 {move || {
                     manifest.get().flatten().map(|m| {
                         let slug_val = slug();
+                        let total_chapters = m.chapters.len();
                         view! {
-                            <div class="book-index">
-                                <h1 class="section-title">{m.title}</h1>
+                            <div class="book-index glass-panel" style="padding: 3rem;">
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                                    {m.tags.into_iter().map(|t| view! { <span class="tag">{t}</span> }).collect_view()}
+                                    <span class="tag" style="background: var(--bg-tertiary); color: var(--text-tertiary);">{total_chapters} " Chapters"</span>
+                                </div>
+                                <h1 class="section-title" style="margin-bottom: 0.5rem;">{m.title}</h1>
                                 {if let Some(subtitle) = m.subtitle {
-                                    view! { <h3 class="section-subtitle">{subtitle}</h3> }.into_view()
+                                    view! { <h3 class="section-subtitle" style="margin-bottom: 1.5rem;">{subtitle}</h3> }.into_view()
                                 } else { view! {}.into_view() }}
-                                <p class="text-muted" style="margin-bottom: 2rem;">{m.description}</p>
+                                <p class="text-muted" style="margin-bottom: 2.5rem; line-height: 1.7; font-size: 1.05rem;">{m.description}</p>
                                 
-                                <h2>"Table of Contents"</h2>
+                                <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1.25rem; border-bottom: 2px solid var(--border); padding-bottom: 0.75rem;">"Table of Contents"</h2>
                                 <ol class="chapter-list" style="margin-top: 1rem; line-height: 1.8; list-style-position: inside;">
-                                    {m.chapters.into_iter().map(|chap| {
+                                    {m.chapters.into_iter().enumerate().map(|(idx, chap)| {
                                         let display_name = chap.replace(".md", "").replace(".mdx", "").replace("-", " ");
                                         view! {
-                                            <li>
-                                                <A href=format!("/books/{}/{}", slug_val, chap)>{display_name}</A>
+                                            <li style="margin-bottom: 0.5rem;">
+                                                <A href=format!("/books/{}/{}", slug_val, chap) class="chapter-link">
+                                                    <span style="font-weight: 700; color: var(--accent); margin-right: 0.75rem;">{format!("{:02}.", idx + 1)}</span>
+                                                    <span>{display_name}</span>
+                                                </A>
                                             </li>
                                         }
                                     }).collect_view()}
@@ -1405,6 +2228,11 @@ pub fn BookChapterPage() -> impl IntoView {
     let slug = move || params.with(|p| p.get("slug").cloned().unwrap_or_default());
     let chapter = move || params.with(|p| p.get("chapter").cloned().unwrap_or_default());
     
+    let manifest = create_resource(slug, |s| async move {
+        if s.is_empty() { return None; }
+        api::get_book_manifest(s).await.ok()
+    });
+
     let content = create_resource(
         move || (slug(), chapter()),
         |(s, c)| async move {
@@ -1414,19 +2242,677 @@ pub fn BookChapterPage() -> impl IntoView {
     );
 
     view! {
-        <div class="page-section animate-fade-in container">
-            <div style="margin-bottom: 2rem;">
-                <A href=move || format!("/books/{}", slug()) class="button button-outline">
-                    "&larr; Back to Index"
+        <ReadingProgressBar/>
+        <div class="page-section animate-fade-in container" style="max-width: 860px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <A href=move || format!("/books/{}", slug()) class="btn btn-secondary">
+                    "&larr; Table of Contents"
                 </A>
+                <BookmarkButton 
+                    slug=format!("{}/{}", slug(), chapter())
+                    title=format!("{} — Chapter {}", slug(), chapter().replace(".md", ""))
+                    doc_type="Book Chapter".to_string()
+                    url=format!("/books/{}/{}", slug(), chapter())
+                />
             </div>
+
+            <AudioReader content_selector=".markdown-body"/>
             
-            <Transition fallback=move || view! { <div class="loading">"Loading chapter..."</div> }>
+            <Transition fallback=move || view! { <div class="skeleton-loader glass-panel" style="height: 300px;"></div> }>
                 {move || content.get().map(|c| view! {
-                    <article class="markdown-body" inner_html=c/>
-                    <script>"setTimeout(function() { if (window.hljs) window.hljs.highlightAll(); }, 50);"</script>
+                    <article class="markdown-body glass-panel" style="padding: 3rem; margin-bottom: 2rem;" inner_html=c/>
                 })}
             </Transition>
+
+            <Transition fallback=move || view! { <div></div> }>
+                {move || {
+                    let cur_chap = chapter();
+                    let slug_val = slug();
+                    manifest.get().flatten().map(move |m| {
+                        let chapters = m.chapters;
+                        let cur_idx = chapters.iter().position(|ch| ch == &cur_chap);
+                        let prev_chap = cur_idx.and_then(|idx| if idx > 0 { chapters.get(idx - 1) } else { None });
+                        let next_chap = cur_idx.and_then(|idx| chapters.get(idx + 1));
+                        
+                        view! {
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); gap: 1rem; flex-wrap: wrap;">
+                                {if let Some(prev) = prev_chap {
+                                    let prev_url = format!("/books/{}/{}", slug_val, prev);
+                                    let prev_name = prev.replace(".md", "").replace("-", " ");
+                                    view! {
+                                        <A href=prev_url class="btn btn-secondary">
+                                            "&larr; Previous: " {prev_name}
+                                        </A>
+                                    }.into_view()
+                                } else {
+                                    view! { <div></div> }.into_view()
+                                }}
+                                
+                                {if let Some(next) = next_chap {
+                                    let next_url = format!("/books/{}/{}", slug_val, next);
+                                    let next_name = next.replace(".md", "").replace("-", " ");
+                                    view! {
+                                        <A href=next_url class="btn btn-primary">
+                                            "Next: " {next_name} " &rarr;"
+                                        </A>
+                                    }.into_view()
+                                } else {
+                                    view! { <div></div> }.into_view()
+                                }}
+                            </div>
+                        }
+                    })
+                }}
+            </Transition>
+        </div>
+    }
+}
+
+#[component]
+pub fn ContactPage() -> impl IntoView {
+    view! {
+        <Title text="Contact - Irshad Ali"/>
+        <Meta name="description" content="Get in touch for systems engineering, consulting, Rust development, or technical inquiries."/>
+        <div class="page-section animate-fade-in container" style="max-width: 800px; padding-top: 2rem;">
+            <ContactForm/>
+        </div>
+    }
+}
+
+#[component]
+pub fn AdminMessages() -> impl IntoView {
+    let messages_res = create_resource(|| (), |_| async move { api::get_contact_messages().await.unwrap_or_default() });
+
+    view! {
+        <div class="animate-in fade-in">
+            <h1 class="admin-page-title">"Contact Messages"</h1>
+            <p class="text-muted" style="margin-bottom: 1.5rem;">"Incoming inquiries from the contact form."</p>
+
+            <div class="admin-card glass-panel">
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <tr class="table-header-row">
+                            <th class="table-th">"Date"</th>
+                            <th class="table-th">"Name"</th>
+                            <th class="table-th">"Email"</th>
+                            <th class="table-th">"Message"</th>
+                        </tr>
+                        <Suspense fallback=move || view! { <tr><td colspan="4">"Loading messages..."</td></tr> }>
+                            {move || messages_res.get().map(|items| {
+                                if items.is_empty() {
+                                    view! { <tr><td colspan="4" class="text-muted" style="padding: 1.5rem; text-align: center;">"No messages received yet."</td></tr> }.into_view()
+                                } else {
+                                    items.into_iter().map(|msg| {
+                                        view! {
+                                            <tr class="table-row">
+                                                <td class="table-td text-muted font-mono" style="white-space: nowrap; font-size: 0.85rem;">
+                                                    {msg.created_at.format("%b %d, %Y %H:%M").to_string()}
+                                                </td>
+                                                <td class="table-td font-medium">{msg.name}</td>
+                                                <td class="table-td">
+                                                    <a href=format!("mailto:{}", msg.email) class="text-link">{msg.email}</a>
+                                                </td>
+                                                <td class="table-td" style="max-width: 350px; line-height: 1.5;">{msg.message}</td>
+                                            </tr>
+                                        }
+                                    }).collect_view()
+                                }
+                            })}
+                        </Suspense>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn CommandPalette(
+    is_open: ReadSignal<bool>,
+    set_open: WriteSignal<bool>,
+) -> impl IntoView {
+    let (query, set_query) = create_signal(String::new());
+    let search_action = create_action(|q: &String| {
+        let q = q.clone();
+        async move {
+            if q.trim().is_empty() {
+                Vec::new()
+            } else {
+                api::search_content(q).await.unwrap_or_default()
+            }
+        }
+    });
+
+    let on_input = move |ev| {
+        let val = event_target_value(&ev);
+        set_query.set(val.clone());
+        search_action.dispatch(val);
+    };
+
+    view! {
+        {move || if is_open.get() {
+            view! {
+                <div class="cmd-palette-backdrop animate-fade-in" on:click=move |_| set_open.set(false)>
+                    <div class="cmd-palette-modal glass-panel" on:click=move |ev| ev.stop_propagation()>
+                        <div class="cmd-palette-search-bar">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cmd-palette-icon">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input 
+                                type="text" 
+                                class="cmd-palette-input" 
+                                placeholder="Type to search articles, books, projects, skills... (ESC to close)" 
+                                autofocus=true 
+                                prop:value=query
+                                on:input=on_input
+                            />
+                            <kbd class="cmd-palette-kbd">"ESC"</kbd>
+                        </div>
+                        <div class="cmd-palette-results">
+                            {move || {
+                                let res = search_action.value().get();
+                                match res {
+                                    Some(items) if !items.is_empty() => {
+                                        items.into_iter().map(|item| {
+                                            let url = match item.doc_type.as_str() {
+                                                "Article" => format!("/articles/{}", item.slug),
+                                                "Book" => format!("/books/{}", item.slug),
+                                                "Book Chapter" => format!("/books/{}", item.slug),
+                                                "Project" => format!("/projects/{}", item.slug),
+                                                "Skill" => "/about".to_string(),
+                                                _ => format!("/articles/{}", item.slug),
+                                            };
+                                            let doc_type = item.doc_type.clone();
+                                            let title = item.title.clone();
+                                            let snippet = item.snippet.clone();
+                                            view! {
+                                                <A 
+                                                    href=url 
+                                                    class="cmd-palette-item" 
+                                                    on:click=move |_| set_open.set(false)
+                                                >
+                                                    <div class="cmd-palette-item-header">
+                                                        <span class="cmd-palette-item-type">{doc_type}</span>
+                                                        <span class="cmd-palette-item-title">{title}</span>
+                                                    </div>
+                                                    <p class="cmd-palette-item-snippet" inner_html=snippet></p>
+                                                </A>
+                                            }
+                                        }).collect_view()
+                                    }
+                                    Some(_) if !query.get().is_empty() => {
+                                        view! {
+                                            <div class="cmd-palette-empty">
+                                                <p>"No results found for \"" {query.get()} "\""</p>
+                                            </div>
+                                        }.into_view()
+                                    }
+                                    _ => {
+                                        view! {
+                                            <div class="cmd-palette-quick-links">
+                                                <span class="cmd-palette-section-title">"Quick Navigation"</span>
+                                                <A href="/projects" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"🛠 Projects & Architectural Showcases"</span>
+                                                </A>
+                                                <A href="/experience" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"💼 Experience, Career & Credentials"</span>
+                                                </A>
+                                                <A href="/articles" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"📝 Articles & Systems Engineering"</span>
+                                                </A>
+                                                <A href="/books" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"📚 Books & Technical Manuals"</span>
+                                                </A>
+                                                <A href="/tools" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"⚡ Systems Benchmarks & Latency Tools"</span>
+                                                </A>
+                                                <A href="/resume" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"📄 Resume / CV"</span>
+                                                </A>
+                                                <A href="/contact" class="cmd-palette-item" on:click=move |_| set_open.set(false)>
+                                                    <span class="cmd-palette-item-title">"📬 Contact & Direct Dispatch"</span>
+                                                </A>
+                                            </div>
+                                        }.into_view()
+                                    }
+                                }
+                            }}
+                        </div>
+                    </div>
+                </div>
+            }.into_view()
+        } else {
+            view! { <div></div> }.into_view()
+        }}
+    }
+}
+
+#[component]
+pub fn ReadingProgressBar() -> impl IntoView {
+    let (progress, set_progress) = create_signal(0.0);
+    let _ = &set_progress;
+
+    let _ = window_event_listener(ev::scroll, move |_| {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Some(doc) = win.document() {
+                    if let Some(elem) = doc.document_element() {
+                        let scroll_top = elem.scroll_top() as f64;
+                        let scroll_height = elem.scroll_height() as f64;
+                        let client_height = elem.client_height() as f64;
+                        let total = scroll_height - client_height;
+                        if total > 0.0 {
+                            let pct = (scroll_top / total) * 100.0;
+                            set_progress.set(pct.clamp(0.0, 100.0));
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    view! {
+        <div 
+            class="reading-progress-bar" 
+            style=move || format!("width: {}%;", progress.get())
+        ></div>
+    }
+}
+
+#[component]
+pub fn AudioReader(content_selector: &'static str) -> impl IntoView {
+    let (is_playing, set_playing) = create_signal(false);
+    let (is_paused, set_paused) = create_signal(false);
+    let (rate, set_rate) = create_signal(1.0f32);
+    let _ = (content_selector, &set_playing, &is_paused, &set_paused);
+
+    let play = move || {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(synth) = win.speech_synthesis() {
+                    if is_paused.get() {
+                        synth.resume();
+                        set_paused.set(false);
+                        set_playing.set(true);
+                        return;
+                    }
+                    
+                    synth.cancel();
+
+                    if let Some(doc) = win.document() {
+                        if let Ok(Some(elem)) = doc.query_selector(content_selector) {
+                            let text = elem.text_content().unwrap_or_default();
+                            if !text.is_empty() {
+                                if let Ok(utterance) = web_sys::SpeechSynthesisUtterance::new_with_text(&text) {
+                                    utterance.set_rate(rate.get());
+                                    synth.speak(&utterance);
+                                    set_playing.set(true);
+                                    set_paused.set(false);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    let pause = move || {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(synth) = win.speech_synthesis() {
+                    synth.pause();
+                    set_paused.set(true);
+                    set_playing.set(false);
+                }
+            }
+        }
+    };
+
+    let stop = move || {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(synth) = win.speech_synthesis() {
+                    synth.cancel();
+                    set_playing.set(false);
+                    set_paused.set(false);
+                }
+            }
+        }
+    };
+
+    let set_speed = move |new_rate: f32| {
+        set_rate.set(new_rate);
+        #[cfg(not(feature = "ssr"))]
+        {
+            if is_playing.get() {
+                stop();
+                play();
+            }
+        }
+    };
+
+    view! {
+        <div class="audio-reader-bar glass-panel" style="margin-bottom: 2rem; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.2rem;">"🎙️"</span>
+                <div>
+                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">"Listen to this Content"</span>
+                    <span class="text-muted" style="display: block; font-size: 0.75rem;">"Web Speech Audio Synthesizer"</span>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                {move || if is_playing.get() {
+                    view! {
+                        <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" on:click=move |_| pause()>
+                            "⏸ Pause"
+                        </button>
+                    }.into_view()
+                } else {
+                    view! {
+                        <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" on:click=move |_| play()>
+                            "▶ Play"
+                        </button>
+                    }.into_view()
+                }}
+
+                <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" on:click=move |_| stop()>
+                    "⏹ Stop"
+                </button>
+
+                <div style="display: flex; gap: 0.25rem; margin-left: 0.5rem;">
+                    {[0.8f32, 1.0f32, 1.25f32, 1.5f32, 2.0f32].into_iter().map(|r| {
+                        let active = move || (rate.get() - r).abs() < 0.01;
+                        view! {
+                            <button 
+                                class=move || format!("tag-chip {}", if active() { "active" } else { "" })
+                                style="padding: 0.2rem 0.5rem; font-size: 0.75rem;"
+                                on:click=move |_| set_speed(r)
+                            >
+                                {format!("{}x", r)}
+                            </button>
+                        }
+                    }).collect_view()}
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn BookmarkButton(slug: String, title: String, doc_type: String, url: String) -> impl IntoView {
+    let (is_bookmarked, set_bookmarked) = create_signal(false);
+    let s_clone = slug.clone();
+    let _ = (&slug, &title, &doc_type, &url, &set_bookmarked, &s_clone);
+
+    create_effect(move |_| {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(Some(storage)) = win.local_storage() {
+                    if let Ok(Some(data)) = storage.get_item("reading_bookmarks") {
+                        if let Ok(items) = serde_json::from_str::<Vec<domain::models::BookmarkItem>>(&data) {
+                            if items.iter().any(|i| i.slug == s_clone) {
+                                set_bookmarked.set(true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    let toggle = move |_| {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(Some(storage)) = win.local_storage() {
+                    let mut items: Vec<domain::models::BookmarkItem> = storage.get_item("reading_bookmarks")
+                        .ok()
+                        .flatten()
+                        .and_then(|d| serde_json::from_str(&d).ok())
+                        .unwrap_or_default();
+
+                    let already = items.iter().position(|i| i.slug == slug);
+                    if let Some(pos) = already {
+                        items.remove(pos);
+                        set_bookmarked.set(false);
+                    } else {
+                        items.push(domain::models::BookmarkItem {
+                            slug: slug.clone(),
+                            title: title.clone(),
+                            doc_type: doc_type.clone(),
+                            url: url.clone(),
+                            timestamp: "Saved".to_string(),
+                        });
+                        set_bookmarked.set(true);
+                    }
+
+                    if let Ok(json) = serde_json::to_string(&items) {
+                        let _ = storage.set_item("reading_bookmarks", &json);
+                    }
+                }
+            }
+        }
+    };
+
+    view! {
+        <button 
+            class="btn btn-secondary" 
+            style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; font-size: 0.85rem;"
+            on:click=toggle
+            title="Save for Later"
+        >
+            {move || if is_bookmarked.get() {
+                view! { <span>"🔖 Saved"</span> }.into_view()
+            } else {
+                view! { <span>"📑 Save for Later"</span> }.into_view()
+            }}
+        </button>
+    }
+}
+
+#[component]
+pub fn GithubActivityFeed() -> impl IntoView {
+    let activity_res = create_resource(|| (), |_| async move { api::get_github_activity().await.unwrap_or_default() });
+
+    view! {
+        <section class="page-section container" style="margin-top: 60px;">
+            <div class="section-header">
+                <span class="section-label">"Open Source"</span>
+                <h2 class="section-title">"Live GitHub Activity"</h2>
+                <p class="section-subtitle">"Real-time commit telemetry and open source contributions."</p>
+            </div>
+
+            <Suspense fallback=move || view! { <div class="skeleton-loader glass-panel" style="height: 160px;"></div> }>
+                {move || activity_res.get().map(|events| {
+                    view! {
+                        <div class="github-activity-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                            {events.into_iter().map(|ev| {
+                                view! {
+                                    <div class="glass-panel" style="padding: 1.25rem; border-radius: var(--radius-md); display: flex; flex-direction: column; justify-content: space-between;">
+                                        <div>
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <a href=ev.url target="_blank" rel="noopener" style="font-weight: 700; color: var(--accent); text-decoration: none; font-size: 0.95rem;">
+                                                    {ev.repo}
+                                                </a>
+                                                <span class="tag" style="font-size: 0.7rem; padding: 2px 6px;">{ev.event_type}</span>
+                                            </div>
+                                            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.75rem;">
+                                                {ev.message}
+                                            </p>
+                                        </div>
+                                        <span style="font-size: 0.75rem; color: var(--text-tertiary); font-family: var(--font-mono);">
+                                            {ev.created_at}
+                                        </span>
+                                    </div>
+                                }
+                            }).collect_view()}
+                        </div>
+                    }
+                })}
+            </Suspense>
+        </section>
+    }
+}
+
+#[component]
+pub fn ToolsPage() -> impl IntoView {
+    let (concurrency, set_concurrency) = create_signal(64i32);
+    let (avg_latency_ms, set_avg_latency_ms) = create_signal(5.0f64);
+
+    let latencies = vec![
+        ("L1 Cache Reference", 0.5, "0.5 ns", "0.5 seconds", "Fastest CPU register/cache access"),
+        ("Branch Mispredict", 5.0, "5 ns", "5 seconds", "CPU pipeline stall & flush"),
+        ("L2 Cache Reference", 7.0, "7 ns", "7 seconds", "14x slower than L1 cache"),
+        ("Mutex Lock / Unlock", 25.0, "25 ns", "25 seconds", "OS synchronization overhead"),
+        ("Main Memory Reference", 100.0, "100 ns", "1.6 minutes", "DRAM bus latency"),
+        ("Snappy/Zstd Compress 1KB", 2_000.0, "2 µs", "33 minutes", "In-memory streaming compression"),
+        ("Send 1KB over 1Gbps Network", 10_000.0, "10 µs", "2.7 hours", "Local gigabit network transmission"),
+        ("SSD NVMe Random Read", 150_000.0, "150 µs", "1.7 days", "Flash memory controller latency"),
+        ("Read 1MB Sequentially Memory", 250_000.0, "250 µs", "2.9 days", "High-bandwidth DDR memory copy"),
+        ("Round Trip in Same Datacenter", 500_000.0, "500 µs", "5.8 days", "Switched local datacenter rack RTT"),
+        ("Read 1MB Sequentially from SSD", 1_000_000.0, "1 ms", "11.6 days", "Sequential PCIe NVMe disk read"),
+        ("Send Packet SF to NY (Cross-US)", 40_000_000.0, "40 ms", "1.3 years", "Speed-of-light fiber optic transit"),
+        ("Send Packet CA to Netherlands & back", 150_000_000.0, "150 ms", "4.8 years", "Intercontinental undersea cable"),
+    ];
+
+    let calc_qps = move || {
+        let conc = concurrency.get() as f64;
+        let lat_sec = avg_latency_ms.get() / 1000.0;
+        if lat_sec > 0.0 {
+            (conc / lat_sec).round() as u64
+        } else {
+            0
+        }
+    };
+
+    view! {
+        <Title text="Systems Engineering Tools & Benchmarks - Irshad"/>
+        <Meta name="description" content="Interactive latency numbers every programmer should know, human-scale time visualizer, and Little's Law throughput calculator."/>
+        
+        <div class="page-section container animate-fade-in" style="max-width: 1000px; padding-top: 2rem;">
+            <div class="section-header" style="text-align: left; margin-bottom: 2.5rem;">
+                <span class="section-label">"Systems Benchmarks & Tools"</span>
+                <h1 class="page-title" style="margin-bottom: 0.5rem;">"Latency Numbers Every Programmer Should Know"</h1>
+                <p class="section-subtitle" style="margin: 0;">
+                    "Interactive systems engineering metrics, human-time analogies, and throughput capacity sizing."
+                </p>
+            </div>
+
+            <div class="glass-panel" style="padding: 2rem; margin-bottom: 2.5rem; border-radius: var(--radius-lg);">
+                <div style="margin-bottom: 1.5rem;">
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">
+                        "⏱️ The Human Scale Analogy"
+                    </h2>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
+                        "If 1 CPU cycle (0.5 ns) took exactly 1 second in human perception, how long would other computer operations take?"
+                    </p>
+                </div>
+
+                <div class="latency-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                    {latencies.into_iter().map(|(name, ns, raw_str, human_str, desc): (&str, f64, &str, &str, &str)| {
+                        let log_val = ns.log10();
+                        let min_log = (0.5f64).log10();
+                        let max_log = (150_000_000.0f64).log10();
+                        let pct = ((log_val - min_log) / (max_log - min_log) * 100.0).clamp(3.0, 100.0);
+
+                        view! {
+                            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                                    <div>
+                                        <span style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">{name}</span>
+                                        <span style="display: block; font-size: 0.8rem; color: var(--text-tertiary);">{desc}</span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span class="tag" style="font-family: var(--font-mono); font-weight: bold; background: rgba(59, 130, 246, 0.15); color: var(--accent);">{raw_str}</span>
+                                        <span style="display: block; font-size: 0.85rem; font-weight: 600; color: #f59e0b; margin-top: 2px;">
+                                            "≈ " {human_str}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div style="width: 100%; height: 6px; background: var(--bg-tertiary); border-radius: 3px; overflow: hidden;">
+                                    <div style=format!("width: {}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ef4444); border-radius: 3px;", pct)></div>
+                                </div>
+                            </div>
+                        }
+                    }).collect_view()}
+                </div>
+            </div>
+
+            <div class="glass-panel" style="padding: 2rem; border-radius: var(--radius-lg);">
+                <div class="section-header" style="text-align: left; margin-bottom: 1.5rem;">
+                    <span class="section-label">"Capacity Planning"</span>
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">
+                        "⚡ Throughput & Concurrency Sizer (Little's Law)"
+                    </h2>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
+                        "Estimate maximum theoretical requests per second (QPS) based on concurrent worker threads and service latency."
+                    </p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                            "Concurrent Worker Tasks / Connections: " <span style="color: var(--accent); font-weight: bold;">{move || concurrency.get()}</span>
+                        </label>
+                        <input 
+                            type="range" 
+                            min="1" 
+                            max="1024" 
+                            step="1" 
+                            style="width: 100%;"
+                            prop:value=concurrency
+                            on:input=move |ev| {
+                                if let Ok(val) = event_target_value(&ev).parse::<i32>() {
+                                    set_concurrency.set(val);
+                                }
+                            }
+                        />
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                            "Average Request Latency (ms): " <span style="color: var(--accent); font-weight: bold;">{move || format!("{:.1} ms", avg_latency_ms.get())}</span>
+                        </label>
+                        <input 
+                            type="range" 
+                            min="0.5" 
+                            max="500.0" 
+                            step="0.5" 
+                            style="width: 100%;"
+                            prop:value=avg_latency_ms
+                            on:input=move |ev| {
+                                if let Ok(val) = event_target_value(&ev).parse::<f64>() {
+                                    set_avg_latency_ms.set(val);
+                                }
+                            }
+                        />
+                    </div>
+                </div>
+
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-md); padding: 1.5rem; display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 1rem; text-align: center;">
+                    <div>
+                        <span style="display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary);">"Theoretical Maximum"</span>
+                        <span style="font-size: 2.25rem; font-weight: 800; color: var(--accent); font-family: var(--font-mono);">
+                            {move || format!("{} QPS", calc_qps())}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span style="display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary);">"Estimated Saturation"</span>
+                        <span style="font-size: 1.1rem; font-weight: 600; color: var(--text-main);">
+                            {move || if avg_latency_ms.get() < 2.0 { "⚡ In-Memory / CPU Bound" } else if avg_latency_ms.get() < 20.0 { "💾 Disk / Fast Database I/O" } else { "🌐 Network / Microservice Bound" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     }
 }
