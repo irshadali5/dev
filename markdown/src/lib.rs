@@ -2,6 +2,14 @@ pub mod parser;
 
 pub use parser::*;
 
+pub type MarkdownParser = MarkdownService;
+
+impl MarkdownService {
+    pub fn to_html(md_content: &str) -> String {
+        Self::parse_to_html(md_content)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
