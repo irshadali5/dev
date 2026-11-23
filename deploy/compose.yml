@@ -1,0 +1,37 @@
+# Kiri / Compose configuration
+# Compatible with Kiri (Fast, lightweight Rust container runtime: https://runkiri.com)
+#
+# Usage with Kiri:
+#   kiri compose up -d
+#   or: docker --context kiri compose up -d
+#
+# Local development domain (Kiri auto-DNS):
+#   http://web.kiri.localhost:3000
+#
+version: '3.8'
+
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - LEPTOS_SITE_ADDR=0.0.0.0:3000
+      - LEPTOS_SITE_ROOT=/app/site
+      - DATABASE_URL=sqlite:/app/data/dev_site.db
+    volumes:
+      - ./content:/app/content
+      - ./data:/app/data
+      - ./dev_site.db:/app/data/dev_site.db
+
+  # Pingap: Pure Rust reverse proxy & API gateway (Cloudflare Pingora engine)
+  proxy:
+    image: vicanso/pingap:latest
+    restart: unless-stopped
+    network_mode: host # Enables direct zero-overhead proxying to 127.0.0.1:3000 and native ports 80/443
+    volumes:
+      - ./pingap.toml:/opt/pingap/conf/pingap.toml
+      - ./data/pingap:/opt/pingap/data
+    depends_on:
+      - web
