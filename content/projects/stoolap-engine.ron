@@ -1,0 +1,12 @@
+ProjectMetadata(
+    slug: "stoolap-engine",
+    title: "Stoolap: Embedded MVCC SQL Engine",
+    description: "Pure-Rust ACID-compliant SQL database engine featuring Multi-Version Concurrency Control, write-ahead logging (WAL), B-Tree page layouts, and snapshot isolation.",
+    tags: ["Rust", "Database Engines", "MVCC", "ACID", "SQL", "B-Tree", "WAL"],
+    created_at: "2026-08-01T00:00:00Z",
+    github_url: Some("https://github.com/irshadali5/stoolap"),
+    live_url: Some("https://irshadali.org/tools"),
+    architecture: Some("Multi-Version Concurrency Control (MVCC) with append-only Write-Ahead Logging (WAL), slotted-page B+ Tree storage, lock-free transaction manager, and vectorized expression evaluator."),
+    benchmarks: Some("720,000 read ops/sec with Snapshot Isolation; 145,000 write ops/sec with fsync group commit; p99 read latency < 42μs."),
+    lessons_learned: Some("Slotted page defragmentation and copy-on-write page cache management require careful memory alignment and SIMD boundary checks to prevent cache-line eviction storms."),
+)
