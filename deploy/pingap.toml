@@ -1,0 +1,100 @@
+# =====================================================================
+# Pingap Configuration (Pure Rust / Cloudflare Pingora Reverse Proxy)
+# Primary Domain: irshadali.org
+# Subdomain Redirect: dev.irshadali.org -> irshadali.org
+# =====================================================================
+
+[basic]
+name = "irshadali-pingap"
+threads = 0 # 0 = auto-detect based on CPU core count
+log_level = "info"
+
+# =====================================================================
+# Upstreams (Backend Application Server)
+# =====================================================================
+[upstreams.leptos_backend]
+addrs = ["127.0.0.1:3000"]
+algo = "round_robin"
+connection_timeout = "10s"
+read_timeout = "30s"
+
+# =====================================================================
+# Plugins (Compression, Cache Headers & Redirection)
+# =====================================================================
+
+# Dynamic multi-format compression (gzip, zstd, brotli)
+[plugins.compression]
+category = "compression"
+
+# Long-term static asset caching header
+[plugins.static_cache]
+category = "response_headers"
+set_headers = [
+    "Cache-Control: public, max-age=31536000, immutable"
+]
+
+# Redirect subdomain and legacy domain to primary https://irshadali.org
+[plugins.redirect_to_main]
+category = "redirect"
+host = "irshadali.org"
+http_to_https = true
+
+# Port 80 HTTP-to-HTTPS redirect
+[plugins.http_to_https]
+category = "redirect"
+http_to_https = true
+
+# =====================================================================
+# Routing Locations
+# =====================================================================
+
+# 1. Redirect dev.irshadali.org and dev.irshad.org.in to https://irshadali.org
+[locations.dev_redirect]
+host = "dev.irshadali.org, dev.irshad.org.in"
+path = "/"
+plugins = ["redirect_to_main"]
+
+# 2. High-performance static asset routing with immutable caching
+[locations.static_assets]
+host = "irshadali.org, www.irshadali.org"
+path = "~^/(pkg/|api/og|favicon\\.ico|robots\\.txt|manifest\\.json)"
+upstream = "leptos_backend"
+plugins = ["compression", "static_cache"]
+enable_reverse_proxy_headers = true
+
+# 3. Primary application routing for Leptos SSR + Axum
+[locations.main_app]
+host = "irshadali.org, www.irshadali.org"
+path = "/"
+upstream = "leptos_backend"
+plugins = ["compression"]
+enable_reverse_proxy_headers = true
+
+# 4. Global HTTP-to-HTTPS entrypoint
+[locations.http_redirect]
+path = "/"
+plugins = ["http_to_https"]
+
+# =====================================================================
+# Certificates (Automated Let's Encrypt ACME TLS Management)
+# =====================================================================
+[certificates.main_cert]
+domains = "irshadali.org,www.irshadali.org,dev.irshadali.org"
+acme = "lets_encrypt"
+buffer_days = 30
+
+# =====================================================================
+# Server Listeners
+# =====================================================================
+
+# Inbound HTTP (Port 80) -> Redirect to HTTPS
+[servers.http]
+addr = "0.0.0.0:80"
+locations = ["http_redirect"]
+
+# Inbound HTTPS (Port 443) -> TLS termination with HTTP/2
+[servers.https]
+addr = "0.0.0.0:443"
+locations = ["dev_redirect", "static_assets", "main_app"]
+global_certificates = true
+enabled_h2 = true
