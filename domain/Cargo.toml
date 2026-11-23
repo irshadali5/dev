@@ -5,5 +5,8 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
-uuid = { version = "1.0", features = ["serde", "v4", "js"] }
-chrono = { version = "0.4", features = ["serde"] }
+uuid = { workspace = true, features = ["js"] }
+chrono = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
