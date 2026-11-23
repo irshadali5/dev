@@ -226,6 +226,40 @@ pub async fn submit_contact_form(name: String, email: String, message: String) -
     }
 }
 
+#[server(GetArticleLikes, "/api")]
+pub async fn get_article_likes(slug: String) -> Result<u64, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        use database::repositories::ArticleRepository;
+        let conn = expect_context::<database::DatabaseConnection>();
+        let repo = ArticleRepository::new(conn);
+        repo.get_likes(&slug).await
+            .map_err(|e| ServerFnError::new(e.to_string()))
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let _ = slug;
+        unreachable!()
+    }
+}
+
+#[server(LikeArticle, "/api")]
+pub async fn like_article(slug: String) -> Result<u64, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        use database::repositories::ArticleRepository;
+        let conn = expect_context::<database::DatabaseConnection>();
+        let repo = ArticleRepository::new(conn);
+        repo.increment_likes(&slug).await
+            .map_err(|e| ServerFnError::new(e.to_string()))
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let _ = slug;
+        unreachable!()
+    }
+}
+
 #[server(SubscribeNewsletter, "/api")]
 pub async fn subscribe_newsletter(email: String) -> Result<bool, ServerFnError> {
     if email.is_empty() || !email.contains('@') {
