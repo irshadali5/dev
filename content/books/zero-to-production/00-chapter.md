@@ -73,7 +73,7 @@ To run the examples in this book locally, you will need:
 - A Linux environment (Ubuntu 24.04 or later recommended).
 - **Rust Toolchain**: `rustup default stable`.
 - **eBPF dependencies**: Clang, LLVM, and a Linux kernel version 6.1 or higher for `aya` support.
-- **Docker / Testcontainers**: For running local databases and isolation environments.
+- **Kiri / Testcontainers**: For running local databases and isolation environments with lightweight pure-Rust container tooling.
 - **Performance Profilers**: Linux `perf` and `valgrind`.
 
 ## 8. Architectural Tradeoffs & Edge Cases
