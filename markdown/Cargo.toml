@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-pulldown-cmark = "0.10"
-ron = "0.8"
+pulldown-cmark = { workspace = true }
+ron = { workspace = true }
+syntect = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 domain = { path = "../domain" }
