@@ -1,8 +1,8 @@
 use crate::models::{BookError, BookMeta, Chapter, ChapterMeta, FullBook};
 use database::repositories::BookRepository;
+use database::DatabaseConnection;
 use domain::models::Book;
 use markdown::MarkdownService;
-use sqlx::SqlitePool;
 use std::fs;
 use std::path::Path;
 
@@ -11,9 +11,9 @@ pub struct BookService {
 }
 
 impl BookService {
-    pub fn new(pool: SqlitePool) -> Self {
+    pub fn new(conn: DatabaseConnection) -> Self {
         Self {
-            repo: Some(BookRepository::new(pool)),
+            repo: Some(BookRepository::new(conn)),
         }
     }
 
@@ -21,7 +21,7 @@ impl BookService {
         Self { repo: None }
     }
 
-    pub async fn get_reading_list(&self) -> Result<Vec<Book>, sqlx::Error> {
+    pub async fn get_reading_list(&self) -> Result<Vec<Book>, Box<dyn std::error::Error + Send + Sync>> {
         if let Some(ref repo) = self.repo {
             repo.get_all_books().await
         } else {
@@ -87,10 +87,10 @@ impl BookService {
 }
 
 fn parse_chapter_markdown(content: &str, filename: &str) -> Result<(ChapterMeta, String), BookError> {
-    if content.starts_with("---") {
-        if let Some(end_idx) = content[3..].find("---") {
-            let fm_str = &content[3..3 + end_idx];
-            let body = &content[3 + end_idx + 3..];
+    if let Some(stripped) = content.strip_prefix("---") {
+        if let Some(end_idx) = stripped.find("---") {
+            let fm_str = &stripped[..end_idx];
+            let body = &stripped[end_idx + 3..];
 
             let mut title = filename.replace(".md", "");
             let mut description = None;
@@ -98,15 +98,15 @@ fn parse_chapter_markdown(content: &str, filename: &str) -> Result<(ChapterMeta,
 
             for line in fm_str.lines() {
                 let l = line.trim();
-                if l.starts_with("title:") {
-                    title = l["title:".len()..].trim().trim_matches('"').to_string();
-                } else if l.starts_with("description:") {
-                    let desc = l["description:".len()..].trim().trim_matches('"').to_string();
+                if let Some(val) = l.strip_prefix("title:") {
+                    title = val.trim().trim_matches('"').to_string();
+                } else if let Some(val) = l.strip_prefix("description:") {
+                    let desc = val.trim().trim_matches('"').to_string();
                     if !desc.is_empty() {
                         description = Some(desc);
                     }
-                } else if l.starts_with("order:") {
-                    if let Ok(ord) = l["order:".len()..].trim().parse::<u32>() {
+                } else if let Some(val) = l.strip_prefix("order:") {
+                    if let Ok(ord) = val.trim().parse::<u32>() {
                         order = ord;
                     }
                 }
