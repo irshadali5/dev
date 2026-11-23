@@ -11,7 +11,6 @@ domain = { path = "../domain" }
 # Server-only dependencies
 axum = { workspace = true, optional = true }
 leptos_axum = { workspace = true, optional = true }
-sqlx = { workspace = true, optional = true }
 portfolio = { path = "../portfolio", optional = true }
 articles = { path = "../articles", optional = true }
 books = { path = "../books", optional = true }
@@ -19,9 +18,14 @@ search = { path = "../search", optional = true }
 analytics = { path = "../analytics", optional = true }
 auth = { path = "../auth", optional = true }
 database = { path = "../database", optional = true }
-uuid = { version = "1.0", features = ["v4"], optional = true }
-ron = { version = "0.8", optional = true }
-pulldown-cmark = { version = "0.10", optional = true }
+markdown = { path = "../markdown", optional = true }
+chrono = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+ron = { workspace = true, optional = true }
+pulldown-cmark = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+shared = { path = "../shared", optional = true }
 
 [features]
 hydrate = []
@@ -29,7 +33,6 @@ ssr = [
     "leptos/ssr",
     "dep:axum",
     "dep:leptos_axum",
-    "dep:sqlx",
     "dep:portfolio",
     "dep:articles",
     "dep:books",
@@ -37,7 +40,12 @@ ssr = [
     "dep:analytics",
     "dep:auth",
     "dep:database",
+    "dep:markdown",
+    "dep:chrono",
     "dep:uuid",
     "dep:ron",
-    "dep:pulldown-cmark"
+    "dep:pulldown-cmark",
+    "dep:reqwest",
+    "dep:serde_json",
+    "dep:shared"
 ]
