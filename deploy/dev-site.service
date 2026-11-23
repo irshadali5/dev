@@ -1,0 +1,20 @@
+[Unit]
+Description=Developer Website (Leptos SSR + Axum)
+After=network.target
+
+[Service]
+Type=simple
+User=irshad
+WorkingDirectory=/var/www/irshadali.org
+ExecStart=/var/www/irshadali.org/server
+Restart=always
+RestartSec=5
+Environment=LEPTOS_SITE_ROOT=/var/www/irshadali.org/site
+Environment=LEPTOS_SITE_ADDR=127.0.0.1:3000
+Environment=LEPTOS_ENV=PROD
+Environment=DATABASE_URL=data/dev_site.stoolap
+Environment=STOOLAP_DB_PATH=data/dev_site.stoolap
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
