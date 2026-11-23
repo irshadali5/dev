@@ -1,11 +1,11 @@
 use cfg_if::cfg_if;
-use ui::App;
 
 #[cfg(feature = "ssr")]
 pub mod server;
 
 cfg_if! {
     if #[cfg(feature = "hydrate")] {
+        use ui::App;
         use wasm_bindgen::prelude::wasm_bindgen;
         
         #[wasm_bindgen]
