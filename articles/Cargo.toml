@@ -8,9 +8,8 @@ database = { path = "../database" }
 domain = { path = "../domain" }
 markdown = { path = "../markdown" }
 serde = { workspace = true }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-moka = { version = "0.12", features = ["sync"] }
-ron = "0.8"
-sqlx = { workspace = true }
+moka = { workspace = true }
+ron = { workspace = true }
