@@ -6,9 +6,13 @@ edition = "2021"
 [dependencies]
 markdown = { path = "../markdown" }
 serde = { workspace = true }
-chrono = { version = "0.4", features = ["serde"] }
+ron = { workspace = true }
+chrono = { workspace = true }
 thiserror = { workspace = true }
-moka = { version = "0.12", features = ["sync"] }
+moka = { workspace = true }
 database = { path = "../database" }
 domain = { path = "../domain" }
-sqlx = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
