@@ -127,3 +127,18 @@ impl ArticleService {
         Err(ArticleError::NotFound)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_article_service_loads_fs_articles() {
+        let db = database::get_db(":memory:").await.expect("Failed to create in-memory db");
+        let service = ArticleService::new(db);
+        let articles = service.get_all_articles().await.expect("Failed to load articles");
+        assert!(articles.iter().any(|a| a.slug == "rust-ownership"));
+        let detail = service.get_article("rust-ownership").await.expect("Should find rust-ownership");
+        assert!(!detail.body.is_empty());
+    }
+}
