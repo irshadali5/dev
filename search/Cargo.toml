@@ -14,3 +14,6 @@ portfolio = { path = "../portfolio" }
 database = { path = "../database" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[lints]
+workspace = true
