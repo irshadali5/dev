@@ -10,3 +10,6 @@ syntect = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 domain = { path = "../domain" }
+
+[lints]
+workspace = true
