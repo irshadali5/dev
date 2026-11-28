@@ -829,3 +829,72 @@ pub async fn delete_book(id: String) -> Result<(), ServerFnError> {
         unreachable!()
     }
 }
+
+#[server(GetSiteProfile, "/api")]
+pub async fn get_site_profile() -> Result<domain::models::SiteProfile, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let cfg = config::SiteConfig::load();
+        Ok(domain::models::SiteProfile {
+            title: cfg.title,
+            short_name: cfg.short_name,
+            tagline: cfg.tagline,
+            author: cfg.author,
+            handle: cfg.handle,
+            role: cfg.role,
+            email: cfg.email,
+            bio: cfg.bio,
+            site_url: cfg.site_url,
+            github_url: cfg.github_url,
+            linkedin_url: cfg.linkedin_url,
+            twitter_url: cfg.twitter_url,
+            twitter_handle: cfg.twitter_handle,
+        })
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(GetAboutHtml, "/api")]
+pub async fn get_about_html() -> Result<String, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let path = std::path::Path::new("content/about.md");
+        if path.exists() {
+            let md = std::fs::read_to_string(path).map_err(|e| ServerFnError::new(e.to_string()))?;
+            Ok(markdown::MarkdownService::parse_to_html(&md))
+        } else {
+            Ok("<p>About content not configured yet. Add <code>content/about.md</code>.</p>".to_string())
+        }
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(GetResumeSummary, "/api")]
+pub async fn get_resume_summary() -> Result<String, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        #[derive(serde::Deserialize)]
+        struct ResumeSummaryOnly {
+            #[serde(default)]
+            summary: String,
+        }
+        let path = std::path::Path::new("content/resume.ron");
+        if path.exists() {
+            let raw = std::fs::read_to_string(path).map_err(|e| ServerFnError::new(e.to_string()))?;
+            if let Ok(parsed) = ron::from_str::<ResumeSummaryOnly>(&raw) {
+                return Ok(parsed.summary);
+            }
+        }
+        Ok(String::new())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
