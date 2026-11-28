@@ -50,16 +50,21 @@ fn main() {
         html_content = html_content.replace("<div class=\"code-header\">\n          <span class=\"code-lang\">toml</span>", "");
         html_content = html_content.replace("<pre><code>", "<pre><code class=\"language-rust\">");
         
-        let temp_html = format!("/tmp/clap_{}.html", i);
-        fs::write(&temp_html, &html_content).unwrap();
-        
-        let temp_md = format!("/tmp/clap_{}.md", i);
-        Command::new("pandoc")
-            .args(["-i", &temp_html, "-f", "html", "-t", "gfm", "-o", &temp_md])
-            .status()
-            .unwrap();
-            
-        let mut md = fs::read_to_string(&temp_md).unwrap();
+        let use_pandoc = std::env::args().any(|a| a == "--pandoc");
+        let mut md = if use_pandoc {
+            let temp_html = format!("/tmp/clap_{}.html", i);
+            fs::write(&temp_html, &html_content).unwrap();
+
+            let temp_md = format!("/tmp/clap_{}.md", i);
+            Command::new("pandoc")
+                .args(["-i", &temp_html, "-f", "html", "-t", "gfm", "-o", &temp_md])
+                .status()
+                .unwrap();
+
+            fs::read_to_string(&temp_md).unwrap()
+        } else {
+            books::html_to_markdown(&html_content)
+        };
         
         md = md.replace("<div class=\"callout info\">", "");
         md = md.replace("<div class=\"callout tip\">", "");
