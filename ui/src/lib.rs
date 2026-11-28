@@ -278,6 +278,53 @@ pub fn App() -> impl IntoView {
                     </div>
                 </div>
             </footer>
+            <script>
+                {r#"
+                (function() {
+                    function enhanceProse() {
+                        document.querySelectorAll('.prose pre').forEach(function(pre) {
+                            if (pre.dataset.copyAttached) return;
+                            pre.dataset.copyAttached = '1';
+                            pre.style.position = 'relative';
+                            var btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.textContent = 'Copy';
+                            btn.className = 'btn btn-secondary';
+                            btn.style.cssText = 'position:absolute;top:0.5rem;right:0.5rem;padding:0.2rem 0.55rem;font-size:0.75rem;opacity:0.85;z-index:2;';
+                            btn.addEventListener('click', function() {
+                                var code = pre.querySelector('code');
+                                var txt = code ? code.innerText : pre.innerText;
+                                if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(txt).then(function() {
+                                        btn.textContent = 'Copied!';
+                                        setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+                                    });
+                                }
+                            });
+                            pre.appendChild(btn);
+                        });
+                        document.querySelectorAll('.prose h2[id], .prose h3[id]').forEach(function(h) {
+                            if (h.dataset.anchorAttached) return;
+                            h.dataset.anchorAttached = '1';
+                            var a = document.createElement('a');
+                            a.href = '#' + h.id;
+                            a.textContent = ' #';
+                            a.setAttribute('aria-label', 'Link to section');
+                            a.style.cssText = 'opacity:0.45;text-decoration:none;font-weight:400;margin-left:0.35rem;';
+                            h.appendChild(a);
+                        });
+                    }
+                    if (typeof MutationObserver !== 'undefined') {
+                        new MutationObserver(enhanceProse).observe(document.documentElement, { childList: true, subtree: true });
+                    }
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', enhanceProse);
+                    } else {
+                        enhanceProse();
+                    }
+                })();
+                "#}
+            </script>
         </Router>
     }
 }
@@ -1129,7 +1176,7 @@ fn ProjectDetailPage() -> impl IntoView {
                                 <div class="architecture-topology-card" style="margin-top: 1.25rem; padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.4);">
                                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                                         <span style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent);">"System Architecture Topology"</span>
-                                        <span class="tag" style="font-size: 0.75rem; padding: 2px 8px;">"Kiri Pure-Rust OCI Sandboxing"</span>
+                                        <span class="tag" style="font-size: 0.75rem; padding: 2px 8px;">"Pure-Rust SSR & MVCC"</span>
                                     </div>
                                     <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
                                         "Client (Browser / WASM Hydrated) ──[HTTP/2 TLS]──> Edge Gateway (Axum 0.7) ──> In-Memory MVCC Store (Stoolap v0.5.1) + Full-Text Inverted Index (Tantivy)"
@@ -1282,13 +1329,16 @@ fn ArticlesPage() -> impl IntoView {
                                             <div class="articles-list">
                                                 {filtered.into_iter().map(|a| {
                                                     let slug = a.slug.clone();
-                                                    view! {
-                                                        <article class="article-card animate-slide-up">
-                                                            <div class="article-meta">
-                                                                <span>"Article"</span>
-                                                                <span class="dot">"•"</span>
-                                                                <span><time>{a.created_at.to_rfc3339()}</time></span>
-                                                            </div>
+                                                             let read_mins = estimate_html_reading_time(&a.body);
+                                                             view! {
+                                                         <article class="article-card animate-slide-up">
+                                                             <div class="article-meta">
+                                                                 <span>"Article"</span>
+                                                                 <span class="dot">"•"</span>
+                                                                 <span><time>{a.created_at.to_rfc3339()}</time></span>
+                                                                 <span class="dot">"•"</span>
+                                                                 <span>{format!("{} min read", read_mins)}</span>
+                                                             </div>
                                                             <h2 class="article-title"><A href=format!("/articles/{}", slug)>
                                                                 {a.title}
                                                             </A></h2>
@@ -1379,6 +1429,57 @@ fn NewsletterForm() -> impl IntoView {
     }
 }
 
+fn estimate_html_reading_time(html: &str) -> u32 {
+    let mut in_tag = false;
+    let mut text = String::with_capacity(html.len());
+    for ch in html.chars() {
+        match ch {
+            '<' => {
+                in_tag = true;
+                text.push(' ');
+            }
+            '>' => in_tag = false,
+            _ if !in_tag => text.push(ch),
+            _ => {}
+        }
+    }
+    let words = text.split_whitespace().count();
+    words.div_ceil(200).max(1) as u32
+}
+
+fn extract_toc_from_html(html: &str) -> Vec<(u8, String, String)> {
+    let mut toc = Vec::new();
+    for (level, tag_open, tag_close) in [(2u8, "<h2 ", "</h2>"), (3u8, "<h3 ", "</h3>")] {
+        let mut rest = html;
+        while let Some(start) = rest.find(tag_open) {
+            let after_open = &rest[start..];
+            let Some(end) = after_open.find(tag_close) else { break };
+            let block = &after_open[..end];
+            if let Some(id_start) = block.find("id=\"") {
+                let id_rest = &block[id_start + 4..];
+                if let Some(id_end) = id_rest.find('"') {
+                    let id = id_rest[..id_end].to_string();
+                    if let Some(gt) = block.find('>') {
+                        let raw_text = &block[gt + 1..];
+                        let title = raw_text
+                            .split('<')
+                            .enumerate()
+                            .filter_map(|(i, s)| if i == 0 { Some(s) } else { s.split_once('>').map(|(_, t)| t) })
+                            .collect::<String>()
+                            .trim()
+                            .to_string();
+                        if !id.is_empty() && !title.is_empty() {
+                            toc.push((level, title, id));
+                        }
+                    }
+                }
+            }
+            rest = &after_open[end + tag_close.len()..];
+        }
+    }
+    toc
+}
+
 #[component]
 fn ArticlePage() -> impl IntoView {
     let params = use_params_map();
@@ -1386,6 +1487,9 @@ fn ArticlePage() -> impl IntoView {
     
     // We get a tuple: (Article, views)
     let article = create_resource(slug, |s| async move { get_article(s).await.ok() });
+    let all_articles_res = create_resource(|| (), |_| async move {
+        api::get_articles().await.unwrap_or_default()
+    });
     
     view! {
         <ReadingProgressBar/>
@@ -1443,11 +1547,36 @@ fn ArticlePage() -> impl IntoView {
                                             <div class="article-meta-row">
                                                 <time>{art.created_at.to_rfc3339()}</time>
                                                 <span class="dot">"•"</span>
+                                                <span>{format!("{} min read", estimate_html_reading_time(&art.body))}</span>
+                                                <span class="dot">"•"</span>
                                                 <span>{views} " views"</span>
                                             </div>
                                         </header>
 
                                         <AudioReader content_selector=".article-content"/>
+
+                                        {
+                                            let toc_items = extract_toc_from_html(&art.body);
+                                            if !toc_items.is_empty() {
+                                                view! {
+                                                    <nav class="glass-panel" aria-label="Table of Contents" style="padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: var(--radius-md);">
+                                                        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 0.5rem;">"On this page"</div>
+                                                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem;">
+                                                            {toc_items.into_iter().map(|(lvl, title, id)| {
+                                                                let indent = if lvl == 3 { "padding-left: 1rem; font-size: 0.85rem;" } else { "font-size: 0.9rem;" };
+                                                                view! {
+                                                                    <li style=indent>
+                                                                        <a href=format!("#{}", id) style="color: var(--text-secondary); text-decoration: none;">{title}</a>
+                                                                    </li>
+                                                                }
+                                                            }).collect_view()}
+                                                        </ul>
+                                                    </nav>
+                                                }.into_view()
+                                            } else {
+                                                view! { <span></span> }.into_view()
+                                            }
+                                        }
 
                                         <div class="article-content prose" inner_html=art.body></div>
                                         
@@ -1461,9 +1590,25 @@ fn ArticlePage() -> impl IntoView {
                                                 <ClapButton slug=art.slug.clone()/>
                                             </div>
                                             
-                                            <div class="article-nav">
-                                                <A href="/articles" class="back-link">"← Back to Articles"</A>
-                                            </div>
+                                            {
+                                                let current_slug = art.slug.clone();
+                                                let list = all_articles_res.get().unwrap_or_default();
+                                                let pos = list.iter().position(|a| a.slug == current_slug);
+                                                let prev_art = pos.and_then(|i| if i + 1 < list.len() { Some(list[i + 1].clone()) } else { None });
+                                                let next_art = pos.and_then(|i| if i > 0 { Some(list[i - 1].clone()) } else { None });
+                                                view! {
+                                                    <div class="article-nav" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                                                        {prev_art.map(|p| view! {
+                                                            <A href=format!("/articles/{}", p.slug) class="back-link">{format!("← {}", p.title)}</A>
+                                                        }).unwrap_or_else(|| view! {
+                                                            <A href="/articles" class="back-link">"← All Articles"</A>
+                                                        })}
+                                                        {next_art.map(|n| view! {
+                                                            <A href=format!("/articles/{}", n.slug) class="back-link">{format!("{} →", n.title)}</A>
+                                                        })}
+                                                    </div>
+                                                }
+                                            }
                                         </footer>
                                     </article>
                                 }.into_view()
@@ -1490,7 +1635,13 @@ fn NotFound() -> impl IntoView {
             <h1 class="error-title">"404"</h1>
             <h2 class="error-subtitle">"Page Not Found"</h2>
             <p class="page-subtitle">"The page you are looking for does not exist or has been moved."</p>
-            <A href="/" class="glass-button">"Return Home"</A>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem;">
+                <A href="/" class="btn btn-primary">"Return Home"</A>
+                <A href="/articles" class="btn btn-secondary">"Articles"</A>
+                <A href="/projects" class="btn btn-secondary">"Projects"</A>
+                <A href="/books" class="btn btn-secondary">"Books"</A>
+                <A href="/search" class="btn btn-secondary">"Search"</A>
+            </div>
         </div>
     }
 }
@@ -1744,33 +1895,68 @@ pub fn AdminDashboard() -> impl IntoView {
 
 #[component]
 pub fn AdminOverview() -> impl IntoView {
+    let articles_res = create_resource(|| (), |_| async move { api::get_articles().await.unwrap_or_default().len() });
+    let projects_res = create_resource(|| (), |_| async move { api::get_projects().await.unwrap_or_default().len() });
+    let books_res = create_resource(|| (), |_| async move { api::get_books().await.unwrap_or_default().len() });
+    let skills_res = create_resource(|| (), |_| async move { api::get_skills().await.unwrap_or_default().len() });
+
+    let (reindex_status, set_reindex_status) = create_signal(String::new());
+    let reindex_action = create_action(move |_: &()| async move {
+        api::rebuild_search_index().await
+    });
+    create_effect(move |_| {
+        if let Some(res) = reindex_action.value().get() {
+            match res {
+                Ok(_) => set_reindex_status.set("Search index rebuilt cleanly.".to_string()),
+                Err(e) => set_reindex_status.set(format!("Reindex failed: {}", e)),
+            }
+        }
+    });
+
     view! {
         <div class="animate-in fade-in">
-            <div class="flex items-center justify-between mb-6" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+            <div class="flex items-center justify-between mb-6" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                 <h1 class="admin-page-title mb-0" style="margin-bottom: 0;">"System Dashboard"</h1>
-                <span class="status-badge success">"System Online"</span>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <button
+                        class="btn btn-secondary"
+                        disabled=move || reindex_action.pending().get()
+                        on:click=move |_| reindex_action.dispatch(())
+                    >
+                        {move || if reindex_action.pending().get() { "Reindexing..." } else { "🔄 Rebuild Search Index" }}
+                    </button>
+                    <span class="status-badge success">"System Online"</span>
+                </div>
             </div>
+            {move || {
+                let msg = reindex_status.get();
+                if msg.is_empty() {
+                    view! { <span></span> }.into_view()
+                } else {
+                    view! { <p class="text-muted" style="margin-bottom: 1rem;">{msg}</p> }.into_view()
+                }
+            }}
             
             <div class="dashboard-grid">
                 <div class="metric-card glass-panel">
-                    <span class="metric-title">"Database Connections"</span>
-                    <span class="metric-value">"4"</span>
-                    <span class="metric-trend up">"Healthy"</span>
+                    <span class="metric-title">"Published Articles"</span>
+                    <span class="metric-value">{move || articles_res.get().unwrap_or(0)}</span>
+                    <span class="metric-trend info">"DB + content/articles"</span>
                 </div>
                 <div class="metric-card glass-panel">
-                    <span class="metric-title">"Indexed Articles"</span>
-                    <span class="metric-value">"12"</span>
-                    <span class="metric-trend info">"Tantivy Engine"</span>
+                    <span class="metric-title">"Projects"</span>
+                    <span class="metric-value">{move || projects_res.get().unwrap_or(0)}</span>
+                    <span class="metric-trend info">"DB + content/projects"</span>
                 </div>
                 <div class="metric-card glass-panel">
-                    <span class="metric-title">"Unique Visitors (30d)"</span>
-                    <span class="metric-value">"1,492"</span>
-                    <span class="metric-trend up">"+12%"</span>
+                    <span class="metric-title">"Books"</span>
+                    <span class="metric-value">{move || books_res.get().unwrap_or(0)}</span>
+                    <span class="metric-trend info">"DB + content/books"</span>
                 </div>
                 <div class="metric-card glass-panel">
-                    <span class="metric-title">"API Latency"</span>
-                    <span class="metric-value">"24ms"</span>
-                    <span class="metric-trend info">"P95"</span>
+                    <span class="metric-title">"Skills"</span>
+                    <span class="metric-value">{move || skills_res.get().unwrap_or(0)}</span>
+                    <span class="metric-trend up">"Stoolap MVCC"</span>
                 </div>
             </div>
             
