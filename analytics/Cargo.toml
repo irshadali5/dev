@@ -8,3 +8,6 @@ database = { path = "../database" }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
+
+[lints]
+workspace = true
