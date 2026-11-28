@@ -26,6 +26,7 @@ pulldown-cmark = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 shared = { path = "../shared", optional = true }
+config = { path = "../config", optional = true }
 
 [features]
 hydrate = []
@@ -47,5 +48,6 @@ ssr = [
     "dep:pulldown-cmark",
     "dep:reqwest",
     "dep:serde_json",
-    "dep:shared"
+    "dep:shared",
+    "dep:config"
 ]
