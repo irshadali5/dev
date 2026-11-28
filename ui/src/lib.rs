@@ -53,6 +53,12 @@ pub fn App() -> impl IntoView {
     provide_context(profile_res);
     let profile = move || profile_res.get().unwrap_or_default();
 
+    let home_res = create_resource(|| (), |_| async move {
+        api::get_home_config().await.unwrap_or_default()
+    });
+    provide_context(home_res);
+    let home_cfg = move || home_res.get().unwrap_or_default();
+
     // Global keyboard shortcut: Cmd+K / Ctrl+K / Escape
     let _ = window_event_listener(ev::keydown, move |ev: web_sys::KeyboardEvent| {
         let key = ev.key();
@@ -211,12 +217,12 @@ pub fn App() -> impl IntoView {
                                 <div class="terminal-output">
                                     <span class="accent">{move || format!("<{} />", profile().author)}</span>
                                     {move || profile().role}<br/>
-                                    "C++ • Rust • SQL • GNU/Linux"
+                                    {move || home_cfg().terminal_stack}
                                 </div>
                                 <div class="terminal-prompt">
                                     <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"echo $STATUS"</span>
                                 </div>
-                                <div class="terminal-output success">"[AVAILABLE FOR HIRE]"</div>
+                                <div class="terminal-output success">{move || home_cfg().terminal_status}</div>
                             </div>
                             <div class="terminal-block">
                                 <div class="terminal-comment">"# NAVIGATION"</div>
@@ -250,11 +256,14 @@ pub fn App() -> impl IntoView {
                                     <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"./show_progress.sh"</span>
                                 </div>
                                 <div class="terminal-output skill-tree">
-                                    <div class="skill-level"><span class="lvl-num">"[LVL 1]"</span> <span class="lvl-name">"Bash/Linux"</span> <span class="lvl-bar">"██████████"</span> <span class="lvl-pct">"100%"</span></div>
-                                    <div class="skill-level"><span class="lvl-num">"[LVL 2]"</span> <span class="lvl-name">"SQL/Indexing"</span> <span class="lvl-bar">"██████████"</span> <span class="lvl-pct">"100%"</span></div>
-                                    <div class="skill-level"><span class="lvl-num">"[LVL 3]"</span> <span class="lvl-name">"C++ & STL"</span> <span class="lvl-bar">"████████░░"</span> <span class="lvl-pct">"85%"</span></div>
-                                    <div class="skill-level"><span class="lvl-num">"[LVL 4]"</span> <span class="lvl-name">"Rust/Safety"</span> <span class="lvl-bar">"███████░░░"</span> <span class="lvl-pct">"75%"</span></div>
-                                    <div class="skill-level"><span class="lvl-num">"[LVL 5]"</span> <span class="lvl-name">"AI/Prompts"</span> <span class="lvl-bar">"█████████░"</span> <span class="lvl-pct">"90%"</span></div>
+                                    {move || home_cfg().terminal_skills.into_iter().enumerate().map(|(idx, sk)| view! {
+                                        <div class="skill-level">
+                                            <span class="lvl-num">{format!("[LVL {}]", idx + 1)}</span>" "
+                                            <span class="lvl-name">{sk.name}</span>" "
+                                            <span class="lvl-bar">{sk.bar}</span>" "
+                                            <span class="lvl-pct">{sk.percent}</span>
+                                        </div>
+                                    }).collect_view()}
                                 </div>
                             </div>
                         </div>
@@ -520,66 +529,32 @@ fn FeaturedProjectsSection() -> impl IntoView {
 
 #[component]
 fn ArchitecturePillarsSection() -> impl IntoView {
+    let home_res = use_context::<Resource<(), domain::models::HomeConfig>>();
+    let home = move || home_res.and_then(|r| r.get()).unwrap_or_default();
+
     view! {
         <section class="page-section container" style="margin-top: 80px;">
             <div class="section-header">
-                <span class="section-label">"Core Engineering Specialties"</span>
-                <h2 class="section-title">"Systems Architecture Pillars"</h2>
-                <p class="section-subtitle">"Architectural foundations built on memory safety, formal verification, low latency, and mechanical sympathy."</p>
+                <span class="section-label">{move || home().pillars_label}</span>
+                <h2 class="section-title">{move || home().pillars_title}</h2>
+                <p class="section-subtitle">{move || home().pillars_subtitle}</p>
             </div>
 
             <div class="architecture-bento">
-                <div class="bento-card">
-                    <div>
-                        <div class="bento-icon">"🏛️"</div>
-                        <h3 class="bento-title">"Distributed Consensus & Storage"</h3>
-                        <p class="bento-desc">"Building fault-tolerant linearizable state machines with Raft protocol, dynamic joint consensus membership, snapshot log compaction, and leader read leases."</p>
+                {move || home().pillars.into_iter().map(|pillar| view! {
+                    <div class="bento-card">
+                        <div>
+                            <div class="bento-icon">{pillar.icon}</div>
+                            <h3 class="bento-title">{pillar.title}</h3>
+                            <p class="bento-desc">{pillar.description}</p>
+                        </div>
+                        <ul class="bento-features">
+                            {pillar.features.into_iter().map(|feat| view! {
+                                <li><span>"▹"</span> " " {feat}</li>
+                            }).collect_view()}
+                        </ul>
                     </div>
-                    <ul class="bento-features">
-                        <li><span>"▹"</span> "Raft Consensus Algorithm"</li>
-                        <li><span>"▹"</span> "Dynamic Cluster Reconfiguration"</li>
-                        <li><span>"▹"</span> "Linearizable Read Leases"</li>
-                    </ul>
-                </div>
-
-                <div class="bento-card">
-                    <div>
-                        <div class="bento-icon">"⚡"</div>
-                        <h3 class="bento-title">"Embedded MVCC Database Engines"</h3>
-                        <p class="bento-desc">"Engineering pure-Rust ACID transactional storage engines featuring slotted-page B+ tree indexing, append-only WAL group commits, and lock-free snapshot isolation."</p>
-                    </div>
-                    <ul class="bento-features">
-                        <li><span>"▹"</span> "Multi-Version Concurrency (MVCC)"</li>
-                        <li><span>"▹"</span> "Slotted-Page B+ Tree Layouts"</li>
-                        <li><span>"▹"</span> "Group-Commit WAL Logging"</li>
-                    </ul>
-                </div>
-
-                <div class="bento-card">
-                    <div>
-                        <div class="bento-icon">"🚀"</div>
-                        <h3 class="bento-title">"Zero-Copy Linux Networking"</h3>
-                        <p class="bento-desc">"Eliminating user/kernel space memory copies through Linux io_uring SQPOLL ring submission, kernel TCP socket splicing, and SIMD HTTP/1.1 & HTTP/2 tokenizers."</p>
-                    </div>
-                    <ul class="bento-features">
-                        <li><span>"▹"</span> "Linux io_uring & epoll"</li>
-                        <li><span>"▹"</span> "Zero-Copy splice(2) Sockets"</li>
-                        <li><span>"▹"</span> "SIMD AVX2 Parser Kernels"</li>
-                    </ul>
-                </div>
-
-                <div class="bento-card">
-                    <div>
-                        <div class="bento-icon">"🔒"</div>
-                        <h3 class="bento-title">"Edge WASM & Vector Search"</h3>
-                        <p class="bento-desc">"Deploying sub-millisecond WebAssembly serverless sandboxes with capability-based security boundaries and HNSW vector databases accelerated by AVX-512 SIMD."</p>
-                    </div>
-                    <ul class="bento-features">
-                        <li><span>"▹"</span> "WASI Capability Security"</li>
-                        <li><span>"▹"</span> "HNSW Graph Vector Indexing"</li>
-                        <li><span>"▹"</span> "AVX-512 Distance Acceleration"</li>
-                    </ul>
-                </div>
+                }).collect_view()}
             </div>
         </section>
     }
@@ -638,14 +613,17 @@ fn PublicationsPreviewSection() -> impl IntoView {
 
 #[component]
 pub fn HomePage() -> impl IntoView {
+    let home_res = use_context::<Resource<(), domain::models::HomeConfig>>();
+    let home = move || home_res.and_then(|r| r.get()).unwrap_or_default();
+
     view! {
         <section class="hero page-section container animate-slide-up">
             <div class="hero-content">
                 <div class="hero-focus-pills">
-                    <span class="hero-focus-pill"><span class="dot"></span> "Available for Principal Systems Roles"</span>
-                    <span class="hero-focus-pill">"⚡ Sub-millisecond P99"</span>
-                    <span class="hero-focus-pill">"🦀 Pure Rust & WASM"</span>
-                    <span class="hero-focus-pill">"🔒 ACID MVCC & Raft"</span>
+                    <span class="hero-focus-pill"><span class="dot"></span> " " {move || home().hero_status}</span>
+                    {move || home().hero_pills.into_iter().map(|pill| view! {
+                        <span class="hero-focus-pill">{pill}</span>
+                    }).collect_view()}
                 </div>
                 <span class="section-label" style="display: inline-block;">"Hi, my name is"</span>
                 <h1 class="hero-title">
@@ -696,9 +674,12 @@ pub fn ExperiencePage() -> impl IntoView {
     let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
     let (selected_filter, set_selected_filter) = create_signal("all".to_string());
 
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+    let profile = move || profile_res.and_then(|r| r.get()).unwrap_or_default();
+
     view! {
-        <Title text="Experience & Career - Irshad Ali | Systems Architect"/>
-        <Meta name="description" content="Professional engineering background, distributed systems roles, cloud certifications, and academic degrees of Irshad Ali."/>
+        <Title text=move || format!("Experience & Career - {} | {}", profile().author, profile().role)/>
+        <Meta name="description" content=move || format!("Professional engineering background, roles, certifications, and academic degrees of {}.", profile().author)/>
 
         <div class="page-section container animate-fade-in">
             <div class="section-header">
@@ -968,8 +949,13 @@ fn ProjectsPage() -> impl IntoView {
     let projects = create_resource(|| (), |_| async move { api::get_projects().await.unwrap_or_default() });
     let (selected_tag, set_selected_tag) = create_signal(Option::<String>::None);
 
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+
     view! {
-        <Title text="Portfolio & Distributed Systems - Irshad Ali"/>
+        <Title text=move || {
+            let author = profile_res.and_then(|r| r.get()).map(|p| p.author).unwrap_or_else(|| "Portfolio".to_string());
+            format!("Portfolio & Systems - {}", author)
+        }/>
         <Meta name="description" content="Production distributed systems, embedded database engines, WebAssembly sandboxes, and low-latency benchmarks."/>
         <div class="page-section animate-fade-in container">
             <div class="section-header">
@@ -1224,8 +1210,13 @@ fn ArticlesPage() -> impl IntoView {
     let articles = create_resource(|| (), |_| async move { get_articles().await.unwrap_or_default() });
     let (selected_tag, set_selected_tag) = create_signal(Option::<String>::None);
 
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+
     view! {
-        <Title text="Articles - Irshad"/>
+        <Title text=move || {
+            let name = profile_res.and_then(|r| r.get()).map(|p| p.short_name).unwrap_or_else(|| "Dev".to_string());
+            format!("Articles - {}", name)
+        }/>
         <Meta name="description" content="Thoughts on Rust, Systems Engineering, and software architecture."/>
         <div class="page-section animate-fade-in container">
             <div class="articles-header">
@@ -1421,8 +1412,13 @@ fn ArticlePage() -> impl IntoView {
                                     }
                                 });
                 
+                                let art_title = art.title.clone();
+                                let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
                                 view! {
-                                    <Title text=format!("{} - Irshad", art.title) />
+                                    <Title text=move || {
+                                        let name = profile_res.and_then(|r| r.get()).map(|p| p.short_name).unwrap_or_else(|| "Dev".to_string());
+                                        format!("{} - {}", art_title, name)
+                                    }/>
                                     <Meta name="description" content=art.description.clone().unwrap_or_default() />
                                     <Meta property="og:type" content="article" />
                                     <Meta property="og:title" content=art.title.clone() />
@@ -1593,8 +1589,13 @@ pub fn SearchPage() -> impl IntoView {
         })
     };
 
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+
     view! {
-        <Title text="Search - Irshad"/>
+        <Title text=move || {
+            let name = profile_res.and_then(|r| r.get()).map(|p| p.short_name).unwrap_or_else(|| "Dev".to_string());
+            format!("Search - {}", name)
+        }/>
         <Meta name="description" content="Search across articles, projects, books, and systems architecture."/>
         
         <div class="page-section max-w-3xl animate-fade-in">
@@ -2396,8 +2397,12 @@ pub fn BookChapterPage() -> impl IntoView {
 
 #[component]
 pub fn ContactPage() -> impl IntoView {
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
     view! {
-        <Title text="Contact - Irshad Ali"/>
+        <Title text=move || {
+            let author = profile_res.and_then(|r| r.get()).map(|p| p.author).unwrap_or_else(|| "Contact".to_string());
+            format!("Contact - {}", author)
+        }/>
         <Meta name="description" content="Get in touch for systems engineering, consulting, Rust development, or technical inquiries."/>
         <div class="page-section animate-fade-in container" style="max-width: 800px; padding-top: 2rem;">
             <ContactForm/>
@@ -2882,8 +2887,13 @@ pub fn ToolsPage() -> impl IntoView {
         }
     };
 
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+
     view! {
-        <Title text="Systems Engineering Tools & Benchmarks - Irshad"/>
+        <Title text=move || {
+            let name = profile_res.and_then(|r| r.get()).map(|p| p.short_name).unwrap_or_else(|| "Dev".to_string());
+            format!("Systems Engineering Tools & Benchmarks - {}", name)
+        }/>
         <Meta name="description" content="Interactive latency numbers every programmer should know, human-scale time visualizer, and Little's Law throughput calculator."/>
         
         <div class="page-section container animate-fade-in" style="max-width: 1000px; padding-top: 2rem;">
@@ -3052,128 +3062,45 @@ pub fn ClapButton(slug: String) -> impl IntoView {
 
 #[component]
 pub fn UsesPage() -> impl IntoView {
+    let uses_res = create_resource(|| (), |_| async move { api::get_uses_config().await.unwrap_or_default() });
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+    let profile = move || profile_res.and_then(|r| r.get()).unwrap_or_default();
+
     view! {
-        <Title text="Uses & Rig - Irshad Ali"/>
-        <Meta name="description" content="Development workstation, Linux kernel configuration, Kiri container runtime, and systems toolchain used by Irshad Ali."/>
+        <Title text=move || format!("Uses & Rig - {}", profile().author)/>
+        <Meta name="description" content=move || format!("Development workstation, OS configuration, and systems toolchain used by {}.", profile().author)/>
         
         <div class="page-section max-w-4xl animate-fade-in container">
-            <header style="margin-bottom: 2.5rem;">
-                <div class="tag" style="margin-bottom: 0.75rem;">"Engineering Environment"</div>
-                <h1 class="section-title">"Hardware, Kernel & Toolchain"</h1>
-                <p class="text-muted" style="font-size: 1.15rem; line-height: 1.7; max-width: 720px;">
-                    "A living catalog of the physical workstation, Linux kernel subsystems, pure-Rust container sandboxes, and low-latency developer tooling I rely on daily for high-performance systems engineering."
-                </p>
-            </header>
+            <Suspense fallback=move || view! { <p class="text-muted">"Loading setup..."</p> }>
+                {move || uses_res.get().map(|cfg| view! {
+                    <header style="margin-bottom: 2.5rem;">
+                        <div class="tag" style="margin-bottom: 0.75rem;">{cfg.badge}</div>
+                        <h1 class="section-title">{cfg.heading}</h1>
+                        <p class="text-muted" style="font-size: 1.15rem; line-height: 1.7; max-width: 720px;">
+                            {cfg.intro}
+                        </p>
+                    </header>
 
-            <div class="uses-grid">
-                <div class="uses-card">
-                    <div class="uses-card-header">
-                        <span class="uses-card-icon">"🖥️"</span>
-                        <h2 class="uses-card-title">"Workstation Rig & Hardware"</h2>
+                    <div class="uses-grid">
+                        {cfg.categories.into_iter().map(|cat| view! {
+                            <div class="uses-card">
+                                <div class="uses-card-header">
+                                    <span class="uses-card-icon">{cat.icon}</span>
+                                    <h2 class="uses-card-title">{cat.title}</h2>
+                                </div>
+                                <ul class="uses-item-list">
+                                    {cat.items.into_iter().map(|item| view! {
+                                        <li class="uses-item">
+                                            <span class="uses-item-label">{item.label}</span>
+                                            <span class="uses-item-desc">{item.description}</span>
+                                        </li>
+                                    }).collect_view()}
+                                </ul>
+                            </div>
+                        }).collect_view()}
                     </div>
-                    <ul class="uses-item-list">
-                        <li class="uses-item">
-                            <span class="uses-item-label">"CPU: AMD Ryzen 9 7950X"</span>
-                            <span class="uses-item-desc">"16 Cores, 32 Threads, 5.7 GHz Boost, 80MB Cache. High multi-threaded compilation throughput."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Memory: 64GB DDR5-6000 ECC"</span>
-                            <span class="uses-item-desc">"Dual-channel error-correcting memory for mission-critical compilation and memory leak fuzzing."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"NVMe Storage: Samsung 990 Pro 2TB"</span>
-                            <span class="uses-item-desc">"PCIe 4.0 NVMe running at 7,450 MB/s sequential read, paired with 4TB ZFS mirror array."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"GPU: NVIDIA RTX 4080 (16GB VRAM)"</span>
-                            <span class="uses-item-desc">"Dedicated to local LLM inference (vLLM, Ollama) and CUDA kernel micro-benchmarks."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Peripherals: Keychron Q1 Pro & MX Master 3S"</span>
-                            <span class="uses-item-desc">"Custom 75% mechanical keyboard with Gateron Oil Kings, dual 27\" 4K Dell UltraSharp displays."</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="uses-card">
-                    <div class="uses-card-header">
-                        <span class="uses-card-icon">"🐧"</span>
-                        <h2 class="uses-card-title">"OS & Kernel Architecture"</h2>
-                    </div>
-                    <ul class="uses-item-list">
-                        <li class="uses-item">
-                            <span class="uses-item-label">"OS: Arch Linux / Void Linux (Musl)"</span>
-                            <span class="uses-item-desc">"Minimalist rolling distribution with zero bloat and maximum control over shared libraries."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Kernel: Linux 6.12+ LTS Custom Sysctl"</span>
-                            <span class="uses-item-desc">"Tuned for high file-descriptor limits (fs.file-max=2097152) and aggressive TCP window scaling."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Async I/O: io_uring Subsystem"</span>
-                            <span class="uses-item-desc">"Ring-buffer zero-copy submission and completion queues for high-throughput disk and socket I/O."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Observability: eBPF & bpftrace"</span>
-                            <span class="uses-item-desc">"Kernel probes (kprobes), tracepoints, and BCC scripts for microsecond latency profiling."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Network Stack: TCP BBRv3 & XDP"</span>
-                            <span class="uses-item-desc">"Bottleneck Bandwidth and RTT congestion control with Express Data Path packet filtering."</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="uses-card">
-                    <div class="uses-card-header">
-                        <span class="uses-card-icon">"📦"</span>
-                        <h2 class="uses-card-title">"Container Runtime & Isolation"</h2>
-                    </div>
-                    <ul class="uses-item-list">
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Runtime: Kiri (Pure-Rust Engine)"</span>
-                            <span class="uses-item-desc">"High-performance pure-Rust container engine (libracoder/kiri) compatible with Docker Engine API."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Orchestration: Kiri Compose Spec"</span>
-                            <span class="uses-item-desc">"Declarative service definitions running via kiri compose up -d with zero daemon bloat."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Sandboxing: cgroups v2 & seccomp-BPF"</span>
-                            <span class="uses-item-desc">"Fine-grained memory/CPU quota enforcement and strict syscall allowlists for safe execution."</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="uses-card">
-                    <div class="uses-card-header">
-                        <span class="uses-card-icon">"🦀"</span>
-                        <h2 class="uses-card-title">"Rust Toolchain & Systems Tooling"</h2>
-                    </div>
-                    <ul class="uses-item-list">
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Compiler: rustc Nightly + Stable"</span>
-                            <span class="uses-item-desc">"Managed via rustup with custom profiles, sccache compiler caching, and mold linker."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Profiling: cargo-flamegraph & Miri"</span>
-                            <span class="uses-item-desc">"Stacked sampling profiler for CPU bottlenecks and UB interpreter for unsafe code validation."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Testing: cargo-nextest & criterion"</span>
-                            <span class="uses-item-desc">"Parallel test runner with JUnit reporting and statistical latency benchmarking."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Editor: Neovim (v0.10 Lua) + rust-analyzer"</span>
-                            <span class="uses-item-desc">"Tree-sitter AST syntax, Telescope fuzzy search, Harpoon project navigation."</span>
-                        </li>
-                        <li class="uses-item">
-                            <span class="uses-item-label">"Database: Stoolap v0.5.1 & Tantivy"</span>
-                            <span class="uses-item-desc">"Embedded MVCC SQL engine and pure-Rust inverted index full-text search engine."</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+                })}
+            </Suspense>
         </div>
     }
 }
