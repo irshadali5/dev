@@ -11,7 +11,8 @@ domain = { path = "../domain" }
 api = { path = "../api" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-web-sys = { version = "0.3.107", features = ["Window", "Document", "Element", "Storage", "KeyboardEvent", "SpeechSynthesis", "SpeechSynthesisUtterance"] }
+wasm-bindgen = "0.2.130"
+web-sys = { version = "0.3.107", features = ["Window", "Document", "Element", "HtmlElement", "NodeList", "Node", "Navigator", "Clipboard", "Event", "DomStringMap", "Storage", "KeyboardEvent", "SpeechSynthesis", "SpeechSynthesisUtterance"] }
 
 axum = { workspace = true, optional = true }
 leptos_axum = { workspace = true, optional = true }
@@ -26,3 +27,6 @@ ssr = [
     "dep:leptos_axum",
     "api/ssr"
 ]
+
+[lints]
+workspace = true
