@@ -40,6 +40,20 @@ async fn main() {
     
     tracing::info!("Initializing Stoolap database at {}", db_path);
     let conn = database::get_db(&db_path).await.expect("Failed to initialize Stoolap database");
+
+    // Optional first-run admin bootstrap via ADMIN_EMAIL + ADMIN_PASSWORD
+    if let (Ok(admin_email), Ok(admin_password)) = (std::env::var("ADMIN_EMAIL"), std::env::var("ADMIN_PASSWORD")) {
+        if !admin_email.trim().is_empty() && !admin_password.trim().is_empty() {
+            let user_repo = database::repositories::UserRepository::new(conn.clone());
+            if let Ok(None) = user_repo.get_user_by_email(&admin_email).await {
+                if let Ok(hash) = auth::crypto::hash_password(&admin_password) {
+                    if user_repo.add_user(&admin_email, &hash, "admin").await.is_ok() {
+                        tracing::info!("Bootstrapped admin user {}", admin_email);
+                    }
+                }
+            }
+        }
+    }
     
     // Initialize Asset Pipeline
     let content_dir = std::path::PathBuf::from("content");
@@ -98,6 +112,7 @@ async fn main() {
         .route("/api/v1/stats", axum::routing::get(server::api_v1_stats_handler))
         .route("/api/v1/openapi.json", axum::routing::get(server::api_v1_openapi_handler))
         .nest_service("/pkg", tower_http::services::ServeDir::new(format!("{}/pkg", leptos_options.site_root)))
+        .nest_service("/media", tower_http::services::ServeDir::new("content/assets"))
         .leptos_routes_with_context(&leptos_options, routes, {
             let conn = conn.clone();
             move || {
@@ -109,13 +124,55 @@ async fn main() {
         .layer(axum::extract::Extension(conn))
         .layer(axum::extract::Extension(search_service))
         .layer(tower_http::compression::CompressionLayer::new())
+        .layer(tower_http::set_header::SetResponseHeaderLayer::overriding(
+            axum::http::header::X_CONTENT_TYPE_OPTIONS,
+            axum::http::HeaderValue::from_static("nosniff"),
+        ))
+        .layer(tower_http::set_header::SetResponseHeaderLayer::overriding(
+            axum::http::header::X_FRAME_OPTIONS,
+            axum::http::HeaderValue::from_static("DENY"),
+        ))
+        .layer(tower_http::set_header::SetResponseHeaderLayer::overriding(
+            axum::http::header::HeaderName::from_static("referrer-policy"),
+            axum::http::HeaderValue::from_static("strict-origin-when-cross-origin"),
+        ))
+        .layer(tower_http::set_header::SetResponseHeaderLayer::overriding(
+            axum::http::header::HeaderName::from_static("permissions-policy"),
+            axum::http::HeaderValue::from_static("camera=(), microphone=(), geolocation=()"),
+        ))
         .layer(tower_http::trace::TraceLayer::new_for_http());
 
     tracing::info!("listening on http://{}", &addr);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
+}
+
+#[cfg(feature = "ssr")]
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => { tracing::info!("Received SIGINT, shutting down gracefully..."); },
+        _ = terminate => { tracing::info!("Received SIGTERM, shutting down gracefully..."); },
+    }
 }
 
 #[cfg(not(feature = "ssr"))]
