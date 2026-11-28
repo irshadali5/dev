@@ -54,12 +54,12 @@ async fn get_static_file(
 
 pub async fn rss_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
     use rss::{ChannelBuilder, ItemBuilder, GuidBuilder};
-    use database::repositories::ArticleRepository;
+    use articles::service::ArticleService;
     
     let cfg = config::SiteConfig::load();
     let base_url = cfg.site_url.trim_end_matches('/');
-    let repo = ArticleRepository::new(conn);
-    let articles = repo.get_published_articles().await.unwrap_or_default();
+    let service = ArticleService::new(conn);
+    let articles = service.get_all_articles().await.unwrap_or_default();
     
     let mut items = Vec::new();
     for article in articles {
@@ -97,12 +97,12 @@ pub async fn rss_handler(Extension(conn): Extension<DatabaseConnection>) -> impl
 }
 
 pub async fn atom_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
-    use database::repositories::ArticleRepository;
+    use articles::service::ArticleService;
     
     let cfg = config::SiteConfig::load();
     let base_url = cfg.site_url.trim_end_matches('/');
-    let repo = ArticleRepository::new(conn);
-    let articles = repo.get_published_articles().await.unwrap_or_default();
+    let service = ArticleService::new(conn);
+    let articles = service.get_all_articles().await.unwrap_or_default();
     let updated = chrono::Utc::now().to_rfc3339();
     let author_escaped = cfg.author.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     let title_cfg_escaped = cfg.title.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
@@ -168,12 +168,12 @@ struct JsonFeed {
 }
 
 pub async fn feed_json_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
-    use database::repositories::ArticleRepository;
+    use articles::service::ArticleService;
     
     let cfg = config::SiteConfig::load();
     let base_url = cfg.site_url.trim_end_matches('/');
-    let repo = ArticleRepository::new(conn);
-    let articles = repo.get_published_articles().await.unwrap_or_default();
+    let service = ArticleService::new(conn);
+    let articles = service.get_all_articles().await.unwrap_or_default();
     
     let items = articles.into_iter().map(|a| {
         let url = format!("{}/articles/{}", base_url, a.slug);
@@ -205,16 +205,18 @@ pub async fn feed_json_handler(Extension(conn): Extension<DatabaseConnection>) -
 }
 
 pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
-    use database::repositories::{ArticleRepository, ProjectRepository, BookRepository};
+    use articles::service::ArticleService;
+    use portfolio::service::PortfolioService;
+    use database::repositories::BookRepository;
     
     let cfg = config::SiteConfig::load();
     let base_url = cfg.site_url.trim_end_matches('/');
-    let art_repo = ArticleRepository::new(conn.clone());
-    let proj_repo = ProjectRepository::new(conn.clone());
+    let art_service = ArticleService::new(conn.clone());
+    let proj_service = PortfolioService::new(conn.clone());
     let book_repo = BookRepository::new(conn);
     
-    let articles = art_repo.get_published_articles().await.unwrap_or_default();
-    let projects = proj_repo.get_all_projects().await.unwrap_or_default();
+    let articles = art_service.get_all_articles().await.unwrap_or_default();
+    let projects = proj_service.get_all_projects().await.unwrap_or_default();
     let books = book_repo.get_all_books().await.unwrap_or_default();
     
     let mut urls = String::new();
@@ -678,10 +680,11 @@ pub async fn api_v1_stats_handler(
 }
 
 pub async fn api_v1_openapi_handler() -> impl axum::response::IntoResponse {
+    let cfg = config::SiteConfig::load();
     let spec = serde_json::json!({
         "openapi": "3.0.3",
         "info": {
-            "title": "Irshad Ali - Developer Platform Public API",
+            "title": format!("{} - Developer Platform Public API", cfg.author),
             "version": "1.0.0",
             "description": "Public REST API providing access to articles, technical projects, books, skills, and system telemetry."
         },
