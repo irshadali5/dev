@@ -85,7 +85,7 @@ impl SearchService {
         let mut index_writer = self.index.writer(50_000_000)?;
         index_writer.delete_all_documents()?;
         
-        use database::repositories::{ProjectRepository, BookRepository, PortfolioRepository};
+        use database::repositories::{BookRepository, PortfolioRepository};
         
         // 1. Index Articles (Database + content/articles/)
         let article_service = articles::service::ArticleService::new(conn.clone());
@@ -101,15 +101,16 @@ impl SearchService {
             }
         }
         
-        // 2. Index Projects
-        let project_repo = ProjectRepository::new(conn.clone());
-        if let Ok(projects) = project_repo.get_all_projects().await {
+        // 2. Index Projects (Database + content/projects/)
+        let portfolio_service = portfolio::service::PortfolioService::new(conn.clone());
+        if let Ok(projects) = portfolio_service.get_all_projects().await {
             for p in projects {
                 let mut doc = TantivyDocument::default();
                 doc.add_text(self.title_field, &p.title);
                 let body = format!("{} {}", p.description, p.content_html);
                 doc.add_text(self.body_field, &body);
-                doc.add_text(self.slug_field, "projects");
+                doc.add_text(self.tags_field, &p.tags.join(" "));
+                doc.add_text(self.slug_field, format!("projects/{}", p.slug));
                 doc.add_text(self.type_field, "Project");
                 index_writer.add_document(doc)?;
             }
