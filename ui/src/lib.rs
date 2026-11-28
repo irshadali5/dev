@@ -59,6 +59,18 @@ pub fn App() -> impl IntoView {
     provide_context(home_res);
     let home_cfg = move || home_res.get().unwrap_or_default();
 
+    // Pure-Rust WASM prose enhancement: Copy buttons on <pre> and # anchors on headings
+    #[cfg(not(feature = "ssr"))]
+    {
+        let location = use_location();
+        create_effect(move |_| {
+            let _path = location.pathname.get();
+            request_animation_frame(move || {
+                enhance_prose_dom();
+            });
+        });
+    }
+
     // Global keyboard shortcut: Cmd+K / Ctrl+K / Escape
     let _ = window_event_listener(ev::keydown, move |ev: web_sys::KeyboardEvent| {
         let key = ev.key();
@@ -278,54 +290,89 @@ pub fn App() -> impl IntoView {
                     </div>
                 </div>
             </footer>
-            <script>
-                {r#"
-                (function() {
-                    function enhanceProse() {
-                        document.querySelectorAll('.prose pre').forEach(function(pre) {
-                            if (pre.dataset.copyAttached) return;
-                            pre.dataset.copyAttached = '1';
-                            pre.style.position = 'relative';
-                            var btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.textContent = 'Copy';
-                            btn.className = 'btn btn-secondary';
-                            btn.style.cssText = 'position:absolute;top:0.5rem;right:0.5rem;padding:0.2rem 0.55rem;font-size:0.75rem;opacity:0.85;z-index:2;';
-                            btn.addEventListener('click', function() {
-                                var code = pre.querySelector('code');
-                                var txt = code ? code.innerText : pre.innerText;
-                                if (navigator.clipboard) {
-                                    navigator.clipboard.writeText(txt).then(function() {
-                                        btn.textContent = 'Copied!';
-                                        setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
-                                    });
-                                }
-                            });
-                            pre.appendChild(btn);
-                        });
-                        document.querySelectorAll('.prose h2[id], .prose h3[id]').forEach(function(h) {
-                            if (h.dataset.anchorAttached) return;
-                            h.dataset.anchorAttached = '1';
-                            var a = document.createElement('a');
-                            a.href = '#' + h.id;
-                            a.textContent = ' #';
-                            a.setAttribute('aria-label', 'Link to section');
-                            a.style.cssText = 'opacity:0.45;text-decoration:none;font-weight:400;margin-left:0.35rem;';
-                            h.appendChild(a);
-                        });
-                    }
-                    if (typeof MutationObserver !== 'undefined') {
-                        new MutationObserver(enhanceProse).observe(document.documentElement, { childList: true, subtree: true });
-                    }
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', enhanceProse);
-                    } else {
-                        enhanceProse();
-                    }
-                })();
-                "#}
-            </script>
         </Router>
+    }
+}
+
+#[cfg(not(feature = "ssr"))]
+fn enhance_prose_dom() {
+    use wasm_bindgen::closure::Closure;
+    use wasm_bindgen::JsCast;
+
+    let Some(win) = web_sys::window() else { return };
+    let Some(doc) = win.document() else { return };
+
+    if let Ok(pres) = doc.query_selector_all(".prose pre") {
+        for i in 0..pres.length() {
+            let Some(node) = pres.item(i) else { continue };
+            let Ok(pre) = node.dyn_into::<web_sys::HtmlElement>() else { continue };
+            if pre.dataset().get("copyAttached").is_some() {
+                continue;
+            }
+            let _ = pre.dataset().set("copyAttached", "1");
+            let _ = pre.style().set_property("position", "relative");
+
+            let Ok(btn_el) = doc.create_element("button") else { continue };
+            let Ok(btn) = btn_el.dyn_into::<web_sys::HtmlElement>() else { continue };
+            let _ = btn.set_attribute("type", "button");
+            btn.set_class_name("btn btn-secondary");
+            btn.set_inner_text("Copy");
+            let _ = btn.style().set_css_text(
+                "position:absolute;top:0.5rem;right:0.5rem;padding:0.2rem 0.55rem;font-size:0.75rem;opacity:0.85;z-index:2;",
+            );
+
+            let pre_clone = pre.clone();
+            let btn_clone = btn.clone();
+            let win_clone = win.clone();
+            let cb = Closure::<dyn FnMut(web_sys::Event)>::new(move |_: web_sys::Event| {
+                let text = pre_clone
+                    .query_selector("code")
+                    .ok()
+                    .flatten()
+                    .and_then(|c| c.dyn_into::<web_sys::HtmlElement>().ok())
+                    .map(|c| c.inner_text())
+                    .unwrap_or_else(|| pre_clone.inner_text());
+                let clipboard = win_clone.navigator().clipboard();
+                let _ = clipboard.write_text(&text);
+                btn_clone.set_inner_text("Copied!");
+                let btn_reset = btn_clone.clone();
+                let reset_cb = Closure::once(move || {
+                    btn_reset.set_inner_text("Copy");
+                });
+                let _ = win_clone.set_timeout_with_callback_and_timeout_and_arguments_0(
+                    reset_cb.as_ref().unchecked_ref(),
+                    1500,
+                );
+                reset_cb.forget();
+            });
+            let _ = btn.add_event_listener_with_callback("click", cb.as_ref().unchecked_ref());
+            cb.forget();
+            let _ = pre.append_child(&btn);
+        }
+    }
+
+    if let Ok(headings) = doc.query_selector_all(".prose h2[id], .prose h3[id]") {
+        for i in 0..headings.length() {
+            let Some(node) = headings.item(i) else { continue };
+            let Ok(h) = node.dyn_into::<web_sys::HtmlElement>() else { continue };
+            if h.dataset().get("anchorAttached").is_some() {
+                continue;
+            }
+            let _ = h.dataset().set("anchorAttached", "1");
+            let id = h.id();
+            if id.is_empty() {
+                continue;
+            }
+            let Ok(a_el) = doc.create_element("a") else { continue };
+            let Ok(a) = a_el.dyn_into::<web_sys::HtmlElement>() else { continue };
+            let _ = a.set_attribute("href", &format!("#{}", id));
+            let _ = a.set_attribute("aria-label", "Link to section");
+            a.set_inner_text(" #");
+            let _ = a.style().set_css_text(
+                "opacity:0.45;text-decoration:none;font-weight:400;margin-left:0.35rem;",
+            );
+            let _ = h.append_child(&a);
+        }
     }
 }
 
