@@ -10,6 +10,7 @@ tracing = { workspace = true }
 tokio = { workspace = true }
 domain = { path = "../domain" }
 articles = { path = "../articles" }
+portfolio = { path = "../portfolio" }
 database = { path = "../database" }
 serde = { workspace = true }
 serde_json = { workspace = true }
