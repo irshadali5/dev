@@ -157,3 +157,52 @@ pub struct SiteProfile {
     pub twitter_url: Option<String>,
     pub twitter_handle: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct UsesItem {
+    pub label: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct UsesCategory {
+    pub icon: String,
+    pub title: String,
+    pub items: Vec<UsesItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct UsesConfig {
+    pub badge: String,
+    pub heading: String,
+    pub intro: String,
+    pub categories: Vec<UsesCategory>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct ArchitecturePillar {
+    pub icon: String,
+    pub title: String,
+    pub description: String,
+    pub features: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct TerminalSkillLevel {
+    pub name: String,
+    pub bar: String,
+    pub percent: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct HomeConfig {
+    pub hero_status: String,
+    pub hero_pills: Vec<String>,
+    pub pillars_label: String,
+    pub pillars_title: String,
+    pub pillars_subtitle: String,
+    pub pillars: Vec<ArchitecturePillar>,
+    pub terminal_stack: String,
+    pub terminal_status: String,
+    pub terminal_skills: Vec<TerminalSkillLevel>,
+}
