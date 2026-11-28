@@ -1,0 +1,49 @@
+UsesConfig(
+    badge: "Engineering Environment",
+    heading: "Hardware, Kernel & Toolchain",
+    intro: "A living catalog of the physical workstation, Linux kernel subsystems, pure-Rust container sandboxes, and low-latency developer tooling I rely on daily for high-performance systems engineering.",
+    categories: [
+        (
+            icon: "🖥️",
+            title: "Workstation Rig & Hardware",
+            items: [
+                (label: "CPU: AMD Ryzen 9 7950X", description: "16 Cores, 32 Threads, 5.7 GHz Boost, 80MB Cache. High multi-threaded compilation throughput."),
+                (label: "Memory: 64GB DDR5-6000 ECC", description: "Dual-channel error-correcting memory for mission-critical compilation and memory leak fuzzing."),
+                (label: "NVMe Storage: Samsung 990 Pro 2TB", description: "PCIe 4.0 NVMe running at 7,450 MB/s sequential read, paired with 4TB ZFS mirror array."),
+                (label: "GPU: NVIDIA RTX 4080 (16GB VRAM)", description: "Dedicated to local LLM inference (vLLM, Ollama) and CUDA kernel micro-benchmarks."),
+                (label: "Peripherals: Keychron Q1 Pro & MX Master 3S", description: "Custom 75% mechanical keyboard with Gateron Oil Kings, dual 27\" 4K Dell UltraSharp displays."),
+            ],
+        ),
+        (
+            icon: "🐧",
+            title: "OS & Kernel Architecture",
+            items: [
+                (label: "OS: Arch Linux / Void Linux (Musl)", description: "Minimalist rolling distribution with zero bloat and maximum control over shared libraries."),
+                (label: "Kernel: Linux 6.12+ LTS Custom Sysctl", description: "Tuned for high file-descriptor limits (fs.file-max=2097152) and aggressive TCP window scaling."),
+                (label: "Async I/O: io_uring Subsystem", description: "Ring-buffer zero-copy submission and completion queues for high-throughput disk and socket I/O."),
+                (label: "Observability: eBPF & bpftrace", description: "Kernel probes (kprobes), tracepoints, and BCC scripts for microsecond latency profiling."),
+                (label: "Network Stack: TCP BBRv3 & XDP", description: "Bottleneck Bandwidth and RTT congestion control with Express Data Path packet filtering."),
+            ],
+        ),
+        (
+            icon: "📦",
+            title: "Container Runtime & Isolation",
+            items: [
+                (label: "Runtime: Kiri (Pure-Rust Engine)", description: "High-performance pure-Rust container engine (libracoder/kiri) compatible with Docker Engine API."),
+                (label: "Orchestration: Kiri Compose Spec", description: "Declarative service definitions running via kiri compose up -d with zero daemon bloat."),
+                (label: "Sandboxing: cgroups v2 & seccomp-BPF", description: "Fine-grained memory/CPU quota enforcement and strict syscall allowlists for safe execution."),
+            ],
+        ),
+        (
+            icon: "🦀",
+            title: "Rust Toolchain & Systems Tooling",
+            items: [
+                (label: "Compiler: rustc Nightly + Stable", description: "Managed via rustup with custom profiles, sccache compiler caching, and mold linker."),
+                (label: "Profiling: cargo-flamegraph & Miri", description: "Stacked sampling profiler for CPU bottlenecks and UB interpreter for unsafe code validation."),
+                (label: "Testing: cargo-nextest & criterion", description: "Parallel test runner with JUnit reporting and statistical latency benchmarking."),
+                (label: "Editor: Neovim (v0.10 Lua) + rust-analyzer", description: "Tree-sitter AST syntax, Telescope fuzzy search, Harpoon project navigation."),
+                (label: "Database: Stoolap v0.5.1 & Tantivy", description: "Embedded MVCC SQL engine and pure-Rust inverted index full-text search engine."),
+            ],
+        ),
+    ],
+)
