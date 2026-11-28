@@ -10,3 +10,6 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 walkdir = { workspace = true }
 tokio = { workspace = true, features = ["fs", "rt-multi-thread"] }
+
+[lints]
+workspace = true
