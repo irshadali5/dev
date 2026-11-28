@@ -99,4 +99,15 @@ mod tests {
         assert_eq!(config.title, parsed.title);
         assert_eq!(config.database.engine, "stoolap");
     }
+
+    #[test]
+    fn test_site_config_loads_workspace_ron() {
+        let path = Path::new("../content/site_config.ron");
+        if path.exists() {
+            let raw = fs::read_to_string(path).expect("Failed to read site_config.ron");
+            let parsed: SiteConfig = ron::from_str(&raw).expect("Failed to parse site_config.ron");
+            assert!(!parsed.author.is_empty());
+            assert!(!parsed.handle.is_empty());
+        }
+    }
 }
