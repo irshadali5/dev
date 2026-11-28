@@ -199,8 +199,52 @@ fn init_schema(conn: &DatabaseConnection) -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
+#[derive(serde::Deserialize)]
+struct ResumeSeedTimelineItem {
+    item_type: String,
+    title: String,
+    organization: String,
+    period: String,
+    description: String,
+    order_index: i32,
+}
+
+#[derive(serde::Deserialize)]
+struct ResumeSeedSkill {
+    category: String,
+    name: String,
+    order_index: i32,
+}
+
+#[derive(serde::Deserialize)]
+struct ResumeSeedData {
+    #[serde(default)]
+    timeline: Vec<ResumeSeedTimelineItem>,
+    #[serde(default)]
+    skills: Vec<ResumeSeedSkill>,
+}
+
+fn load_resume_seed() -> Option<ResumeSeedData> {
+    let candidates = [
+        "content/resume.ron",
+        "../content/resume.ron",
+        "../../content/resume.ron",
+    ];
+    for path in candidates {
+        if let Ok(raw) = std::fs::read_to_string(path) {
+            if let Ok(parsed) = ron::from_str::<ResumeSeedData>(&raw) {
+                return Some(parsed);
+            }
+        }
+    }
+    None
+}
+
 fn seed_initial_data(conn: &DatabaseConnection) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let db = conn.inner();
+    let Some(seed) = load_resume_seed() else {
+        return Ok(());
+    };
 
     // Check if timeline_items is empty
     let timeline_count = match db.query("SELECT count(*) FROM timeline_items", ()) {
@@ -215,22 +259,20 @@ fn seed_initial_data(conn: &DatabaseConnection) -> Result<(), Box<dyn std::error
     };
 
     if timeline_count == 0 {
-        let items = [
-            ("experience", "Lead Systems Architect", "Distributed Cloud Systems", "2023 - Present", "Architecting high-throughput distributed database engines, zero-copy network reverse proxies, and low-latency asynchronous microservices using Rust, Tokio, and C++. Leading cloud native migrations and fault-tolerant Raft replication clusters.", 1),
-            ("experience", "Senior Backend & Infrastructure Engineer", "Scalable Systems Corp", "2021 - 2023", "Built high-concurrency event-driven processing pipelines handling 50k+ QPS with sub-15ms p99 latency using Rust, PostgreSQL, Kafka, and Redis. Engineered transactional outbox patterns and distributed consensus primitives.", 2),
-            ("experience", "Software Engineer - Systems & Platforms", "Core Engineering Labs", "2019 - 2021", "Developed high-performance Linux kernel integration tooling, eBPF telemetry collectors, and WebAssembly serverless execution runtimes with strict capability-based isolation.", 3),
-            ("certification", "AWS Certified Solutions Architect – Professional", "Amazon Web Services (AWS)", "2024", "Advanced cloud architecture, multi-region distributed disaster recovery, high-availability VPC networks, and low-latency infrastructure design.", 4),
-            ("certification", "Certified Kubernetes Administrator (CKA)", "Cloud Native Computing Foundation (CNCF)", "2023", "Cluster lifecycle management, etcd backup/restore, custom controllers, multi-tenant network policies, and production ingress scaling.", 5),
-            ("certification", "Rust Systems & Concurrency Specialization", "Linux Foundation", "2023", "Zero-cost abstractions, unsafe memory invariants, atomics, lock-free data structures, and SIMD hardware acceleration.", 6),
-            ("education", "Bachelor of Technology in Computer Science & Engineering", "National Institute of Technology", "2015 - 2019", "Core coursework in Distributed Operating Systems, Database Engine Theory, Algorithms & Data Structures, Advanced Computer Networks, and Compiler Construction. Graduated with Honors.", 7),
-        ];
-
         let now = chrono::Utc::now().to_rfc3339();
-        for (itype, title, org, period, desc, order) in items {
+        for item in &seed.timeline {
             let id = uuid::Uuid::new_v4().to_string();
             let sql = format!(
                 "INSERT INTO timeline_items (id, item_type, title, organization, period, description, order_index, created_at, updated_at) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', {}, '{}', '{}')",
-                id, itype, title.replace('\'', "''"), org.replace('\'', "''"), period.replace('\'', "''"), desc.replace('\'', "''"), order, now, now
+                id,
+                item.item_type.replace('\'', "''"),
+                item.title.replace('\'', "''"),
+                item.organization.replace('\'', "''"),
+                item.period.replace('\'', "''"),
+                item.description.replace('\'', "''"),
+                item.order_index,
+                now,
+                now
             );
             let _ = db.execute(&sql, ());
         }
@@ -249,47 +291,20 @@ fn seed_initial_data(conn: &DatabaseConnection) -> Result<(), Box<dyn std::error
     };
 
     if skills_count == 0 {
-        let skills = [
-            ("Languages & Core", "Rust (Advanced Systems)", 1),
-            ("Languages & Core", "C++20 / C", 2),
-            ("Languages & Core", "Go", 3),
-            ("Languages & Core", "SQL / Database Internals", 4),
-            ("Languages & Core", "WebAssembly / WASI", 5),
-            ("Languages & Core", "TypeScript / Node.js", 6),
-            ("Distributed Systems & Storage", "Stoolap (Embedded MVCC)", 1),
-            ("Distributed Systems & Storage", "Raft Consensus & Linearizability", 2),
-            ("Distributed Systems & Storage", "PostgreSQL & Query Optimization", 3),
-            ("Distributed Systems & Storage", "Kafka & Event-Driven CQRS", 4),
-            ("Distributed Systems & Storage", "Redis & In-Memory Caching", 5),
-            ("Distributed Systems & Storage", "Tantivy Full-Text Search", 6),
-            ("Networking & Performance", "Linux io_uring & epoll", 1),
-            ("Networking & Performance", "Zero-Copy TCP Splicing", 2),
-            ("Networking & Performance", "SIMD (AVX-512 / NEON) Acceleration", 3),
-            ("Networking & Performance", "gRPC & Protocol Buffers", 4),
-            ("Networking & Performance", "Async Tokio Actor Concurrency", 5),
-            ("Cloud, DevOps & Security", "Kubernetes & Cloud-Native", 1),
-            ("Cloud, DevOps & Security", "Kiri (Rust Container Runtime) & Sandboxing", 2),
-            ("Cloud, DevOps & Security", "Linux eBPF & Observability", 3),
-            ("Cloud, DevOps & Security", "AWS Distributed Infrastructure", 4),
-            ("Cloud, DevOps & Security", "Prometheus Telemetry & Grafana", 5),
-            ("Cloud, DevOps & Security", "Automated CI/CD Workflows", 6),
-        ];
-
         let now = chrono::Utc::now().to_rfc3339();
-        for (category, name, order) in skills {
+        for skill in &seed.skills {
             let id = uuid::Uuid::new_v4().to_string();
             let sql = format!(
                 "INSERT INTO skills (id, category, name, order_index, created_at, updated_at) VALUES ('{}', '{}', '{}', {}, '{}', '{}')",
-                id, category.replace('\'', "''"), name.replace('\'', "''"), order, now, now
+                id,
+                skill.category.replace('\'', "''"),
+                skill.name.replace('\'', "''"),
+                skill.order_index,
+                now,
+                now
             );
             let _ = db.execute(&sql, ());
         }
-    } else {
-        // Automatically migrate any legacy Docker entry to Kiri
-        let _ = db.execute(
-            "UPDATE skills SET name = 'Kiri (Rust Container Runtime) & Sandboxing' WHERE name LIKE '%Docker%'",
-            (),
-        );
     }
 
     Ok(())
