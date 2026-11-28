@@ -25,15 +25,15 @@ Everything personal lives in `content/` and `.env` — you do **not** need to ed
    ```bash
    cargo leptos watch
    ```
-   Or build and run tests:
+   Or build and run tests via `cargo xtask`:
    ```bash
-   cargo test --workspace
+   cargo xtask check
    ```
 
-## Deployment
+## Deployment & Automation (`cargo xtask`)
 
-Set `DOMAIN`, `IP_ADDRESSE`, `USER`, and `KEY` in `.env` (or environment variables), place your release binary and `site` bundle in `deploy/`, and run:
+All automation lives in Rust (`xtask/`):
 
-```bash
-./deploy_to_server.sh
-```
+- `cargo xtask check` — runs `cargo test --workspace` and checks both `ui --features hydrate` and `app --features ssr`.
+- `cargo xtask sync-content` — syncs `content/` into `deploy/content/`.
+- `cargo xtask deploy` — loads `.env` (`DOMAIN`, `IP_ADDRESSE`, `USER`, `KEY`), syncs content, uploads `deploy/`, and runs remote setup.
