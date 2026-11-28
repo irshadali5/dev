@@ -14,3 +14,6 @@ tracing = { workspace = true }
 moka = { workspace = true }
 ron = { workspace = true }
 uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
