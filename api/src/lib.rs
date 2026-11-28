@@ -213,6 +213,9 @@ pub async fn submit_contact_form(name: String, email: String, message: String) -
     
     #[cfg(feature = "ssr")]
     {
+        if !enforce_rate_limit("contact", 5, 300) {
+            return Err(ServerFnError::new("Too many contact requests. Please try again later.".to_string()));
+        }
         use database::repositories::ContactRepository;
         let conn = expect_context::<database::DatabaseConnection>();
         let repo = ContactRepository::new(conn);
@@ -247,6 +250,9 @@ pub async fn get_article_likes(slug: String) -> Result<u64, ServerFnError> {
 pub async fn like_article(slug: String) -> Result<u64, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
+        if !enforce_rate_limit("like", 30, 60) {
+            return Err(ServerFnError::new("Rate limit exceeded. Please slow down.".to_string()));
+        }
         use database::repositories::ArticleRepository;
         let conn = expect_context::<database::DatabaseConnection>();
         let repo = ArticleRepository::new(conn);
@@ -268,6 +274,9 @@ pub async fn subscribe_newsletter(email: String) -> Result<bool, ServerFnError> 
     
     #[cfg(feature = "ssr")]
     {
+        if !enforce_rate_limit("newsletter", 5, 300) {
+            return Err(ServerFnError::new("Too many subscription requests. Please try again later.".to_string()));
+        }
         use database::repositories::NewsletterRepository;
         let conn = expect_context::<database::DatabaseConnection>();
         let repo = NewsletterRepository::new(conn);
@@ -475,6 +484,23 @@ pub async fn rebuild_search_index() -> Result<(), ServerFnError> {
 }
 
 #[cfg(feature = "ssr")]
+fn enforce_rate_limit(scope: &str, max_requests: u32, window_secs: u64) -> bool {
+    use axum::http::request::Parts as RequestParts;
+    let client_ip = use_context::<RequestParts>()
+        .and_then(|parts| {
+            parts
+                .headers
+                .get("x-forwarded-for")
+                .or_else(|| parts.headers.get("x-real-ip"))
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.split(',').next().unwrap_or("unknown").trim().to_string())
+        })
+        .unwrap_or_else(|| "global".to_string());
+    let key = format!("{}:{}", scope, client_ip);
+    shared::RateLimiter::check(&key, max_requests, window_secs)
+}
+
+#[cfg(feature = "ssr")]
 pub fn get_jwt_secret() -> String {
     use std::env;
     use std::sync::OnceLock;
@@ -482,9 +508,13 @@ pub fn get_jwt_secret() -> String {
     static SECRET: OnceLock<String> = OnceLock::new();
     
     SECRET.get_or_init(|| {
-        env::var("JWT_SECRET").unwrap_or_else(|_| {
-            uuid::Uuid::new_v4().to_string()
-        })
+        match env::var("JWT_SECRET") {
+            Ok(val) if !val.trim().is_empty() => val,
+            _ => {
+                eprintln!("WARNING: JWT_SECRET is not set; using an ephemeral random secret (sessions will reset on restart).");
+                uuid::Uuid::new_v4().to_string()
+            }
+        }
     }).clone()
 }
 
@@ -541,6 +571,9 @@ pub async fn check_auth() -> Result<bool, ServerFnError> {
 pub async fn login(email: String, password: String) -> Result<bool, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
+        if !enforce_rate_limit("login", 10, 60) {
+            return Err(ServerFnError::new("Too many login attempts. Please wait a minute.".to_string()));
+        }
         use auth::service::AuthService;
         use leptos_axum::ResponseOptions;
 
