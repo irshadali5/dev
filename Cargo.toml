@@ -16,6 +16,7 @@ members = [
     "search",
     "shared",
     "ui",
+    "xtask",
 ]
 resolver = "2"
 
@@ -60,3 +61,6 @@ opt-level = 'z'
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
