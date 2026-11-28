@@ -20,8 +20,14 @@ impl Default for DatabaseConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SiteConfig {
     pub title: String,
+    #[serde(default = "default_short_name")]
+    pub short_name: String,
     pub tagline: String,
     pub author: String,
+    #[serde(default = "default_handle")]
+    pub handle: String,
+    #[serde(default = "default_role")]
+    pub role: String,
     pub email: String,
     pub bio: String,
     pub site_url: String,
@@ -29,21 +35,39 @@ pub struct SiteConfig {
     pub linkedin_url: String,
     pub twitter_url: Option<String>,
     #[serde(default)]
+    pub twitter_handle: Option<String>,
+    #[serde(default)]
     pub database: DatabaseConfig,
+}
+
+fn default_short_name() -> String {
+    "Dev".to_string()
+}
+
+fn default_handle() -> String {
+    "dev".to_string()
+}
+
+fn default_role() -> String {
+    "Software Engineer".to_string()
 }
 
 impl Default for SiteConfig {
     fn default() -> Self {
         Self {
-            title: "Irshad - Software Engineer & Systems Architect".to_string(),
-            tagline: "High-Performance Distributed Systems, Rust, and Cloud Architecture".to_string(),
-            author: "Irshad Ali".to_string(),
-            email: "contact@irshadali.org".to_string(),
-            bio: "Systems architect building resilient distributed backends, developer tooling, and modern web applications with Rust.".to_string(),
-            site_url: "https://irshadali.org".to_string(),
-            github_url: "https://github.com/irshadali5".to_string(),
-            linkedin_url: "https://linkedin.com/in/irshadali5".to_string(),
-            twitter_url: Some("https://twitter.com/irshadali5".to_string()),
+            title: "Developer Portfolio & Blog".to_string(),
+            short_name: default_short_name(),
+            tagline: "Software Engineering, Systems, and Writing".to_string(),
+            author: "Your Name".to_string(),
+            handle: default_handle(),
+            role: default_role(),
+            email: "hello@example.com".to_string(),
+            bio: "Software engineer building reliable systems, developer tools, and web applications.".to_string(),
+            site_url: "https://example.com".to_string(),
+            github_url: "https://github.com/username".to_string(),
+            linkedin_url: "https://linkedin.com/in/username".to_string(),
+            twitter_url: None,
+            twitter_handle: None,
             database: DatabaseConfig::default(),
         }
     }
