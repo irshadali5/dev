@@ -52,14 +52,26 @@ async fn get_static_file(
     }
 }
 
-pub async fn rss_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
+#[derive(Deserialize)]
+pub struct FeedParams {
+    pub tag: Option<String>,
+}
+
+pub async fn rss_handler(
+    Extension(conn): Extension<DatabaseConnection>,
+    axum::extract::Query(params): axum::extract::Query<FeedParams>,
+) -> impl axum::response::IntoResponse {
     use rss::{ChannelBuilder, ItemBuilder, GuidBuilder};
     use articles::service::ArticleService;
     
     let cfg = config::SiteConfig::load();
     let base_url = cfg.site_url.trim_end_matches('/');
     let service = ArticleService::new(conn);
-    let articles = service.get_all_articles().await.unwrap_or_default();
+    let mut articles = service.get_all_articles().await.unwrap_or_default();
+    if let Some(ref tag) = params.tag {
+        let t_lower = tag.to_lowercase();
+        articles.retain(|a| a.tags.iter().any(|t| t.to_lowercase() == t_lower));
+    }
     
     let mut items = Vec::new();
     for article in articles {
@@ -92,17 +104,25 @@ pub async fn rss_handler(Extension(conn): Extension<DatabaseConnection>) -> impl
     
     axum::response::Response::builder()
         .header("Content-Type", "application/rss+xml; charset=utf-8")
+        .header("Cache-Control", "public, max-age=1800")
         .body(channel.to_string())
         .unwrap()
 }
 
-pub async fn atom_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
+pub async fn atom_handler(
+    Extension(conn): Extension<DatabaseConnection>,
+    axum::extract::Query(params): axum::extract::Query<FeedParams>,
+) -> impl axum::response::IntoResponse {
     use articles::service::ArticleService;
     
     let cfg = config::SiteConfig::load();
     let base_url = cfg.site_url.trim_end_matches('/');
     let service = ArticleService::new(conn);
-    let articles = service.get_all_articles().await.unwrap_or_default();
+    let mut articles = service.get_all_articles().await.unwrap_or_default();
+    if let Some(ref tag) = params.tag {
+        let t_lower = tag.to_lowercase();
+        articles.retain(|a| a.tags.iter().any(|t| t.to_lowercase() == t_lower));
+    }
     let updated = chrono::Utc::now().to_rfc3339();
     let author_escaped = cfg.author.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     let title_cfg_escaped = cfg.title.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
@@ -143,6 +163,7 @@ pub async fn atom_handler(Extension(conn): Extension<DatabaseConnection>) -> imp
     
     axum::response::Response::builder()
         .header("Content-Type", "application/atom+xml; charset=utf-8")
+        .header("Cache-Control", "public, max-age=1800")
         .body(atom)
         .unwrap()
 }
@@ -200,6 +221,7 @@ pub async fn feed_json_handler(Extension(conn): Extension<DatabaseConnection>) -
     
     axum::response::Response::builder()
         .header("Content-Type", "application/feed+json; charset=utf-8")
+        .header("Cache-Control", "public, max-age=1800")
         .body(json_body)
         .unwrap()
 }
@@ -299,6 +321,7 @@ pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> 
 
     axum::response::Response::builder()
         .header("Content-Type", "application/xml; charset=utf-8")
+        .header("Cache-Control", "public, max-age=1800")
         .body(sitemap)
         .unwrap()
 }
@@ -313,6 +336,7 @@ pub async fn robots_handler() -> impl axum::response::IntoResponse {
 
     axum::response::Response::builder()
         .header("Content-Type", "text/plain; charset=utf-8")
+        .header("Cache-Control", "public, max-age=3600")
         .body(robots)
         .unwrap()
 }
@@ -505,6 +529,7 @@ pub async fn api_v1_articles_handler(
         [
             ("Content-Type", "application/json; charset=utf-8"),
             ("Access-Control-Allow-Origin", "*"),
+            ("Cache-Control", "public, max-age=300"),
         ],
         serde_json::to_string(&json_articles).unwrap_or_default(),
     )
@@ -580,6 +605,7 @@ pub async fn api_v1_projects_handler(
         [
             ("Content-Type", "application/json; charset=utf-8"),
             ("Access-Control-Allow-Origin", "*"),
+            ("Cache-Control", "public, max-age=300"),
         ],
         serde_json::to_string(&json_projs).unwrap_or_default(),
     )
@@ -607,6 +633,7 @@ pub async fn api_v1_books_handler(
         [
             ("Content-Type", "application/json; charset=utf-8"),
             ("Access-Control-Allow-Origin", "*"),
+            ("Cache-Control", "public, max-age=300"),
         ],
         serde_json::to_string(&json_books).unwrap_or_default(),
     )
@@ -633,6 +660,7 @@ pub async fn api_v1_skills_handler(
         [
             ("Content-Type", "application/json; charset=utf-8"),
             ("Access-Control-Allow-Origin", "*"),
+            ("Cache-Control", "public, max-age=300"),
         ],
         serde_json::to_string(&json_skills).unwrap_or_default(),
     )
@@ -664,7 +692,7 @@ pub async fn api_v1_stats_handler(
         "books_count": books_count,
         "skills_count": skills_count,
         "engine": "stoolap",
-        "container_runtime": "kiri",
+        "container_runtime": std::env::var("CONTAINER_RUNTIME").unwrap_or_else(|_| "oci".to_string()),
         "framework": "leptos_ssr_axum",
         "pure_rust": true
     });
@@ -674,6 +702,7 @@ pub async fn api_v1_stats_handler(
         [
             ("Content-Type", "application/json; charset=utf-8"),
             ("Access-Control-Allow-Origin", "*"),
+            ("Cache-Control", "public, max-age=300"),
         ],
         stats.to_string(),
     )
@@ -733,6 +762,7 @@ pub async fn api_v1_openapi_handler() -> impl axum::response::IntoResponse {
         [
             ("Content-Type", "application/json; charset=utf-8"),
             ("Access-Control-Allow-Origin", "*"),
+            ("Cache-Control", "public, max-age=300"),
         ],
         spec.to_string(),
     )
