@@ -50,18 +50,21 @@ fn main() {
         html_content = html_content.replace("<div class=\"code-header\"><span class=\"code-lang\">toml</span><button class=\"copy-btn\" onclick=\"copy(this)\">copy</button></div>", "");
         html_content = html_content.replace("<pre><code>", "<pre><code class=\"language-rust\">");
         
-        // Write temp html
-        let temp_html = format!("/tmp/section_{}.html", i);
-        fs::write(&temp_html, &html_content).unwrap();
-        
-        // Run pandoc
-        let temp_md = format!("/tmp/section_{}.md", i);
-        Command::new("pandoc")
-            .args(["-i", &temp_html, "-f", "html", "-t", "gfm", "-o", &temp_md])
-            .status()
-            .unwrap();
-            
-        let mut md = fs::read_to_string(&temp_md).unwrap();
+        let use_pandoc = std::env::args().any(|a| a == "--pandoc");
+        let mut md = if use_pandoc {
+            let temp_html = format!("/tmp/section_{}.html", i);
+            fs::write(&temp_html, &html_content).unwrap();
+
+            let temp_md = format!("/tmp/section_{}.md", i);
+            Command::new("pandoc")
+                .args(["-i", &temp_html, "-f", "html", "-t", "gfm", "-o", &temp_md])
+                .status()
+                .unwrap();
+
+            fs::read_to_string(&temp_md).unwrap()
+        } else {
+            books::html_to_markdown(&html_content)
+        };
         
         // Cleanup pandoc output
         md = md.replace("<div class=\"callout callout-info\">", "");
