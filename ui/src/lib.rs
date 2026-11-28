@@ -47,6 +47,12 @@ pub fn App() -> impl IntoView {
 
     let (is_palette_open, set_palette_open) = create_signal(false);
 
+    let profile_res = create_resource(|| (), |_| async move {
+        api::get_site_profile().await.unwrap_or_default()
+    });
+    provide_context(profile_res);
+    let profile = move || profile_res.get().unwrap_or_default();
+
     // Global keyboard shortcut: Cmd+K / Ctrl+K / Escape
     let _ = window_event_listener(ev::keydown, move |ev: web_sys::KeyboardEvent| {
         let key = ev.key();
@@ -61,21 +67,27 @@ pub fn App() -> impl IntoView {
     view! {
         <Html lang="en" attr:data-theme=move || theme.get()/>
         <Stylesheet id="leptos" href="/pkg/dev-site.css"/>
-        <Title text="Irshad - Developer & Writer"/>
-        <Meta name="description" content="Irshad Ali — Software Engineer & Systems Architect. High-Performance Distributed Systems, Rust, and Cloud Architecture."/>
-        <Meta property="og:site_name" content="Irshad Ali"/>
+        <Title text=move || {
+            let p = profile();
+            if p.title.is_empty() { "Developer Portfolio".to_string() } else { p.title }
+        }/>
+        <Meta name="description" content=move || {
+            let p = profile();
+            if p.tagline.is_empty() { p.bio } else { format!("{} — {}", p.author, p.tagline) }
+        }/>
+        <Meta property="og:site_name" content=move || profile().author/>
         <Meta property="og:type" content="website"/>
-        <Meta property="og:title" content="Irshad Ali — Software Engineer & Systems Architect"/>
-        <Meta property="og:description" content="High-Performance Distributed Systems, Rust, and Cloud Architecture."/>
+        <Meta property="og:title" content=move || profile().title/>
+        <Meta property="og:description" content=move || profile().tagline/>
         <Meta property="og:image" content="/api/og"/>
         <Meta name="twitter:card" content="summary_large_image"/>
-        <Meta name="twitter:creator" content="@irshadali5"/>
-        <Meta name="twitter:title" content="Irshad Ali — Software Engineer & Systems Architect"/>
-        <Meta name="twitter:description" content="High-Performance Distributed Systems, Rust, and Cloud Architecture."/>
+        <Meta name="twitter:creator" content=move || profile().twitter_handle.unwrap_or_default()/>
+        <Meta name="twitter:title" content=move || profile().title/>
+        <Meta name="twitter:description" content=move || profile().tagline/>
         <Meta name="twitter:image" content="/api/og"/>
-        <Link rel="alternate" type_="application/rss+xml" title="Irshad RSS Feed" href="/rss.xml"/>
-        <Link rel="alternate" type_="application/atom+xml" title="Irshad Atom Feed" href="/atom.xml"/>
-        <Link rel="alternate" type_="application/feed+json" title="Irshad JSON Feed" href="/feed.json"/>
+        <Link rel="alternate" type_="application/rss+xml" title="RSS Feed" href="/rss.xml"/>
+        <Link rel="alternate" type_="application/atom+xml" title="Atom Feed" href="/atom.xml"/>
+        <Link rel="alternate" type_="application/feed+json" title="JSON Feed" href="/feed.json"/>
         <Link rel="manifest" href="/manifest.json"/>
         
         // Zero-FOUC inline theme script
@@ -187,29 +199,29 @@ pub fn App() -> impl IntoView {
                             <span class="control yellow"></span>
                             <span class="control green"></span>
                         </div>
-                        <div class="terminal-title">"irshad@portfolio:~$ cat ./system/info.md"</div>
+                        <div class="terminal-title">{move || format!("{}@portfolio:~$ cat ./system/info.md", profile().handle)}</div>
                     </div>
                     <div class="terminal-body">
                         <div class="terminal-grid">
                             <div class="terminal-block">
                                 <div class="terminal-comment">"# SYSTEM_IDENTITY"</div>
                                 <div class="terminal-prompt">
-                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"whoami"</span>
+                                    <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"whoami"</span>
                                 </div>
                                 <div class="terminal-output">
-                                    <span class="accent">"<Irshad Ali />"</span>
-                                    "Systems Programmer & AI Engineer"<br/>
+                                    <span class="accent">{move || format!("<{} />", profile().author)}</span>
+                                    {move || profile().role}<br/>
                                     "C++ • Rust • SQL • GNU/Linux"
                                 </div>
                                 <div class="terminal-prompt">
-                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"echo $STATUS"</span>
+                                    <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"echo $STATUS"</span>
                                 </div>
                                 <div class="terminal-output success">"[AVAILABLE FOR HIRE]"</div>
                             </div>
                             <div class="terminal-block">
                                 <div class="terminal-comment">"# NAVIGATION"</div>
                                 <div class="terminal-prompt">
-                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"ls -la"</span>
+                                    <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"ls -la"</span>
                                 </div>
                                 <div class="terminal-output">
                                     <A href="/" class="terminal-link">"drwxr-xr-x  home/"</A>
@@ -224,18 +236,18 @@ pub fn App() -> impl IntoView {
                             <div class="terminal-block">
                                 <div class="terminal-comment">"# NETWORK_PORTS"</div>
                                 <div class="terminal-prompt">
-                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"netstat -tulpn"</span>
+                                    <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"netstat -tulpn"</span>
                                 </div>
                                 <div class="terminal-output">
-                                    <a href="https://github.com/irshadali5" target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 github.com:443 ESTABLISHED"</a>
-                                    <a href="https://linkedin.com/in/irshadali" target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 linkedin.com:443 ESTABLISHED"</a>
-                                    <a href="mailto:contact@irshadali.org" class="terminal-link">"tcp 0 0 smtp.mail:587 LISTENING"</a>
+                                    <a href=move || profile().github_url target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 github.com:443 ESTABLISHED"</a>
+                                    <a href=move || profile().linkedin_url target="_blank" rel="noopener" class="terminal-link">"tcp 0 0 linkedin.com:443 ESTABLISHED"</a>
+                                    <a href=move || format!("mailto:{}", profile().email) class="terminal-link">"tcp 0 0 smtp.mail:587 LISTENING"</a>
                                 </div>
                             </div>
                             <div class="terminal-block">
                                 <div class="terminal-comment">"# SKILL_TREE (Beginner → Advanced)"</div>
                                 <div class="terminal-prompt">
-                                    <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"./show_progress.sh"</span>
+                                    <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"./show_progress.sh"</span>
                                 </div>
                                 <div class="terminal-output skill-tree">
                                     <div class="skill-level"><span class="lvl-num">"[LVL 1]"</span> <span class="lvl-name">"Bash/Linux"</span> <span class="lvl-bar">"██████████"</span> <span class="lvl-pct">"100%"</span></div>
@@ -248,10 +260,10 @@ pub fn App() -> impl IntoView {
                         </div>
                         <div class="terminal-footer-bottom">
                             <div class="terminal-prompt">
-                                <span class="user">"irshad"</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"uptime"</span>
+                                <span class="user">{move || profile().handle}</span><span class="at">"@"</span><span class="host">"dev"</span><span class="path">"~$"</span> <span class="cmd">"uptime"</span>
                             </div>
                             <div class="terminal-output">
-                                "© 2026 Irshad Ali. System Uptime: " <span class="uptime-val">"5y 14d 08h 32m"</span>". Compiled with Leptos & Axum. "<span class="cursor" aria-hidden="true"></span>
+                                {move || format!("© 2026 {}. Compiled with Leptos & Axum. ", profile().author)}<span class="cursor" aria-hidden="true"></span>
                             </div>
                         </div>
                     </div>
@@ -637,13 +649,24 @@ pub fn HomePage() -> impl IntoView {
                 </div>
                 <span class="section-label" style="display: inline-block;">"Hi, my name is"</span>
                 <h1 class="hero-title">
-                    <span class="gradient-text">"Irshad Ali."</span>
+                    <span class="gradient-text">{move || {
+                        let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+                        let author = profile_res.and_then(|r| r.get()).map(|p| p.author).unwrap_or_default();
+                        if author.is_empty() { "Developer.".to_string() } else { format!("{}.", author) }
+                    }}</span>
                 </h1>
                 <h2 class="hero-subtitle" style="font-size: clamp(2rem, 5vw, 4rem); font-weight: 700; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    "I engineer reliable distributed systems."
+                    {move || {
+                        let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+                        let role = profile_res.and_then(|r| r.get()).map(|p| p.role).unwrap_or_default();
+                        if role.is_empty() { "I engineer reliable distributed systems.".to_string() } else { role }
+                    }}
                 </h2>
                 <p class="hero-subtitle" style="font-size: 1.2rem; line-height: 1.7; max-width: 760px;">
-                    "Systems architect specializing in high-throughput distributed database engines, zero-copy network proxies, and low-latency Rust infrastructure. I build safe, concurrent, and mechanically sympathetic backends."
+                    {move || {
+                        let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+                        profile_res.and_then(|r| r.get()).map(|p| p.bio).unwrap_or_default()
+                    }}
                 </p>
                 <div class="hero-actions" style="margin-top: 2rem;">
                     <A href="/projects" class="btn btn-primary">
@@ -772,14 +795,23 @@ pub fn ExperiencePage() -> impl IntoView {
 
 #[component]
 fn AboutPage() -> impl IntoView {
+    let about_res = create_resource(|| (), |_| async move {
+        api::get_about_html().await.unwrap_or_default()
+    });
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+
     view! {
+        <Title text=move || {
+            let name = profile_res.and_then(|r| r.get()).map(|p| p.short_name).unwrap_or_else(|| "Dev".to_string());
+            format!("About - {}", name)
+        }/>
         <div class="page-section container animate-slide-up">
             <h1 class="page-title">"About Me"</h1>
-            <div class="content-prose">
-                <p class="mb-4">"I build high-performance distributed systems and web applications, predominantly using Rust, C++, and SQL."</p>
-                <p class="mb-4">"My core expertise centers around low-latency architectures, systems safety, database engines, and AI pipelines."</p>
-                <p>"This website itself is engineered with pure Rust using Leptos SSR, Axum, Tokio, and Tantivy full-text search."</p>
-            </div>
+            <Suspense fallback=move || view! { <p class="text-muted">"Loading..."</p> }>
+                {move || about_res.get().map(|html| view! {
+                    <div class="content-prose prose" inner_html=html></div>
+                })}
+            </Suspense>
         </div>
     }
 }
@@ -789,34 +821,39 @@ fn ResumePage() -> impl IntoView {
     let timeline_res = create_resource(|| (), |_| async move { api::get_timeline().await.unwrap_or_default() });
     let skills_res = create_resource(|| (), |_| async move { api::get_skills().await.unwrap_or_default() });
     let projects_res = create_resource(|| (), |_| async move { api::get_projects().await.unwrap_or_default() });
+    let summary_res = create_resource(|| (), |_| async move { api::get_resume_summary().await.unwrap_or_default() });
+    let profile_res = use_context::<Resource<(), domain::models::SiteProfile>>();
+    let profile = move || profile_res.and_then(|r| r.get()).unwrap_or_default();
 
     view! {
-        <Title text="Resume - Irshad Ali | Systems & AI Engineer"/>
-        <Meta name="description" content="Resume and Curriculum Vitae of Irshad Ali - Systems Engineer, C++, Rust, AI Pipelines."/>
+        <Title text=move || format!("Resume - {} | {}", profile().author, profile().role)/>
+        <Meta name="description" content=move || format!("Resume and Curriculum Vitae of {} - {}", profile().author, profile().tagline)/>
         
         <div class="page-section container animate-slide-up" style="max-width: 900px;">
             <div class="resume-card glass-panel" style="padding: 3rem;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem; border-bottom: 2px solid var(--border); padding-bottom: 2rem; margin-bottom: 2rem;">
                     <div>
-                        <h1 class="page-title" style="margin-bottom: 0.5rem; font-size: 2.75rem;">"Irshad Ali"</h1>
-                        <h2 style="font-size: 1.25rem; font-weight: 600; color: var(--accent); margin-bottom: 1rem;">"Systems Programmer & AI Engineer"</h2>
+                        <h1 class="page-title" style="margin-bottom: 0.5rem; font-size: 2.75rem;">{move || profile().author}</h1>
+                        <h2 style="font-size: 1.25rem; font-weight: 600; color: var(--accent); margin-bottom: 1rem;">{move || profile().role}</h2>
                         <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.95rem; color: var(--text-secondary);">
-                            <span>"📧 contact@irshadali.org"</span>
+                            <span>{move || format!("📧 {}", profile().email)}</span>
                             <span>"•"</span>
-                            <span>"🌐 irshadali.org"</span>
+                            <span>{move || format!("🌐 {}", profile().site_url.trim_start_matches("https://").trim_start_matches("http://"))}</span>
                             <span>"•"</span>
-                            <a href="https://github.com/irshadali5" target="_blank" rel="noopener" style="color: var(--accent);">"🐙 GitHub"</a>
+                            <a href=move || profile().github_url target="_blank" rel="noopener" style="color: var(--accent);">"🐙 GitHub"</a>
                             <span>"•"</span>
-                            <a href="https://linkedin.com/in/irshadali" target="_blank" rel="noopener" style="color: var(--accent);">"💼 LinkedIn"</a>
+                            <a href=move || profile().linkedin_url target="_blank" rel="noopener" style="color: var(--accent);">"💼 LinkedIn"</a>
                         </div>
                     </div>
                 </div>
 
                 <section style="margin-bottom: 2.5rem;">
                     <h3 style="font-size: 1.25rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">"Summary"</h3>
-                    <p style="color: var(--text-secondary); line-height: 1.7;">
-                        "High-performance systems programmer specializing in Rust, C++, distributed architectures, and scalable AI infrastructure. Experienced in designing robust web services, database storage engines, and type-safe systems with zero-cost abstractions."
-                    </p>
+                    <Suspense fallback=move || view! { <p class="text-muted">"Loading summary..."</p> }>
+                        {move || summary_res.get().map(|summary| view! {
+                            <p style="color: var(--text-secondary); line-height: 1.7;">{summary}</p>
+                        })}
+                    </Suspense>
                 </section>
 
                 <section style="margin-bottom: 2.5rem;">
