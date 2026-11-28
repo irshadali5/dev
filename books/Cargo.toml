@@ -17,3 +17,6 @@ ron = { workspace = true }
 regex = { workspace = true }
 walkdir = { workspace = true }
 tokio = { workspace = true }
+
+[lints]
+workspace = true
