@@ -25,9 +25,9 @@ leptos = { version = "0.6" }
 leptos_axum = { version = "0.6" }
 leptos_meta = { version = "0.6" }
 leptos_router = { version = "0.6" }
-tokio = { version = "1.43", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1.43", features = ["rt-multi-thread", "macros", "time", "signal"] }
 tower = { version = "0.4", features = ["util"] }
-tower-http = { version = "0.5", features = ["fs", "trace", "compression-full"] }
+tower-http = { version = "0.5", features = ["fs", "trace", "compression-full", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 log = "0.4"
