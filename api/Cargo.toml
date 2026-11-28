@@ -51,3 +51,6 @@ ssr = [
     "dep:shared",
     "dep:config"
 ]
+
+[lints]
+workspace = true
