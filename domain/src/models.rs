@@ -140,3 +140,20 @@ pub struct BookmarkItem {
     pub url: String,
     pub timestamp: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct SiteProfile {
+    pub title: String,
+    pub short_name: String,
+    pub tagline: String,
+    pub author: String,
+    pub handle: String,
+    pub role: String,
+    pub email: String,
+    pub bio: String,
+    pub site_url: String,
+    pub github_url: String,
+    pub linkedin_url: String,
+    pub twitter_url: Option<String>,
+    pub twitter_handle: Option<String>,
+}
