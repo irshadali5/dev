@@ -1,0 +1,62 @@
+HomeConfig(
+    hero_status: "Available for Principal Systems Roles",
+    hero_pills: [
+        "⚡ Sub-millisecond P99",
+        "🦀 Pure Rust & WASM",
+        "🔒 ACID MVCC & Raft",
+    ],
+    pillars_label: "Core Engineering Specialties",
+    pillars_title: "Systems Architecture Pillars",
+    pillars_subtitle: "Architectural foundations built on memory safety, formal verification, low latency, and mechanical sympathy.",
+    pillars: [
+        (
+            icon: "🏛️",
+            title: "Distributed Consensus & Storage",
+            description: "Building fault-tolerant linearizable state machines with Raft protocol, dynamic joint consensus membership, snapshot log compaction, and leader read leases.",
+            features: [
+                "Raft Consensus Algorithm",
+                "Dynamic Cluster Reconfiguration",
+                "Linearizable Read Leases",
+            ],
+        ),
+        (
+            icon: "⚡",
+            title: "Embedded MVCC Database Engines",
+            description: "Engineering pure-Rust ACID transactional storage engines featuring slotted-page B+ tree indexing, append-only WAL group commits, and lock-free snapshot isolation.",
+            features: [
+                "Multi-Version Concurrency (MVCC)",
+                "Slotted-Page B+ Tree Layouts",
+                "Group-Commit WAL Logging",
+            ],
+        ),
+        (
+            icon: "🚀",
+            title: "Zero-Copy Linux Networking",
+            description: "Eliminating user/kernel space memory copies through Linux io_uring SQPOLL ring submission, kernel TCP socket splicing, and SIMD HTTP/1.1 & HTTP/2 tokenizers.",
+            features: [
+                "Linux io_uring & epoll",
+                "Zero-Copy splice(2) Sockets",
+                "SIMD AVX2 Parser Kernels",
+            ],
+        ),
+        (
+            icon: "🔒",
+            title: "Edge WASM & Vector Search",
+            description: "Deploying sub-millisecond WebAssembly serverless sandboxes with capability-based security boundaries and HNSW vector databases accelerated by AVX-512 SIMD.",
+            features: [
+                "WASI Capability Security",
+                "HNSW Graph Vector Indexing",
+                "AVX-512 Distance Acceleration",
+            ],
+        ),
+    ],
+    terminal_stack: "C++ • Rust • SQL • GNU/Linux",
+    terminal_status: "[AVAILABLE FOR HIRE]",
+    terminal_skills: [
+        (name: "Bash/Linux", bar: "██████████", percent: "100%"),
+        (name: "SQL/Indexing", bar: "██████████", percent: "100%"),
+        (name: "C++ & STL", bar: "████████░░", percent: "85%"),
+        (name: "Rust/Safety", bar: "███████░░░", percent: "75%"),
+        (name: "AI/Prompts", bar: "█████████░", percent: "90%"),
+    ],
+)
