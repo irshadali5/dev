@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TARGET_DIR="/var/www/irshadali.org"
+DOMAIN="${DOMAIN:-irshadali.org}"
+TARGET_DIR="${TARGET_DIR:-/var/www/${DOMAIN}}"
 CURRENT_USER="$(whoami)"
 
 echo "=================================================="
-echo " Setting up irshadali.org on $(hostname)"
+echo " Setting up ${DOMAIN} on $(hostname)"
 echo " Running as user: ${CURRENT_USER}"
 echo "=================================================="
 
@@ -26,8 +27,11 @@ cp -r "${SCRIPT_DIR}/data/"* "${TARGET_DIR}/data/" || true
 [ -f "${SCRIPT_DIR}/dev_site.db" ] && cp "${SCRIPT_DIR}/dev_site.db" "${TARGET_DIR}/" || true
 cp "${SCRIPT_DIR}/pingap.toml" "${TARGET_DIR}/pingap.toml"
 
-# Update user in service unit file if different
+# Update user and domain in service/proxy configs if customized
 sed -i "s/User=irshad/User=${CURRENT_USER}/g" "${SCRIPT_DIR}/dev-site.service"
+if [ "${DOMAIN}" != "irshadali.org" ]; then
+    sed -i "s/irshadali.org/${DOMAIN}/g" "${SCRIPT_DIR}/dev-site.service" "${SCRIPT_DIR}/pingap.service" "${TARGET_DIR}/pingap.toml"
+fi
 
 # 3. Ensure Pingap reverse proxy binary is installed
 echo "[3/6] Installing / Verifying Pingap reverse proxy..."
@@ -68,5 +72,5 @@ sudo systemctl status dev-site.service --no-pager || true
 sudo systemctl status pingap.service --no-pager || true
 
 echo "=================================================="
-echo "🎉 Setup complete! irshadali.org is live and serving."
+echo "🎉 Setup complete! ${DOMAIN} is live and serving."
 echo "=================================================="
