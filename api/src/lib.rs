@@ -352,8 +352,18 @@ pub async fn get_github_activity() -> Result<Vec<domain::models::GithubActivityI
             return Ok(items);
         }
 
+        let cfg = config::SiteConfig::load();
+        let gh_user = cfg
+            .github_url
+            .trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .filter(|s| !s.is_empty())
+            .unwrap_or("username");
+
         let client = reqwest::Client::new();
-        let resp = client.get("https://api.github.com/users/irshadali5/events/public")
+        let api_url = format!("https://api.github.com/users/{}/events/public", gh_user);
+        let resp = client.get(&api_url)
             .header("User-Agent", "dev-portfolio-app")
             .send()
             .await;
@@ -392,11 +402,11 @@ pub async fn get_github_activity() -> Result<Vec<domain::models::GithubActivityI
 
         if results.is_empty() {
             results.push(domain::models::GithubActivityItem {
-                repo: "irshadali5/dev".to_string(),
+                repo: format!("{}/dev", gh_user),
                 event_type: "PushEvent".to_string(),
                 message: "feat: high performance distributed systems architecture & full text search".to_string(),
                 created_at: "Recent".to_string(),
-                url: "https://github.com/irshadali5/dev".to_string(),
+                url: cfg.github_url,
             });
         }
 
@@ -892,6 +902,44 @@ pub async fn get_resume_summary() -> Result<String, ServerFnError> {
             }
         }
         Ok(String::new())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(GetUsesConfig, "/api")]
+pub async fn get_uses_config() -> Result<domain::models::UsesConfig, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let path = std::path::Path::new("content/uses.ron");
+        if path.exists() {
+            let raw = std::fs::read_to_string(path).map_err(|e| ServerFnError::new(e.to_string()))?;
+            let parsed: domain::models::UsesConfig =
+                ron::from_str(&raw).map_err(|e| ServerFnError::new(e.to_string()))?;
+            return Ok(parsed);
+        }
+        Ok(domain::models::UsesConfig::default())
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
+    }
+}
+
+#[server(GetHomeConfig, "/api")]
+pub async fn get_home_config() -> Result<domain::models::HomeConfig, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let path = std::path::Path::new("content/home.ron");
+        if path.exists() {
+            let raw = std::fs::read_to_string(path).map_err(|e| ServerFnError::new(e.to_string()))?;
+            let parsed: domain::models::HomeConfig =
+                ron::from_str(&raw).map_err(|e| ServerFnError::new(e.to_string()))?;
+            return Ok(parsed);
+        }
+        Ok(domain::models::HomeConfig::default())
     }
     #[cfg(not(feature = "ssr"))]
     {
