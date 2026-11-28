@@ -56,12 +56,14 @@ pub async fn rss_handler(Extension(conn): Extension<DatabaseConnection>) -> impl
     use rss::{ChannelBuilder, ItemBuilder, GuidBuilder};
     use database::repositories::ArticleRepository;
     
+    let cfg = config::SiteConfig::load();
+    let base_url = cfg.site_url.trim_end_matches('/');
     let repo = ArticleRepository::new(conn);
     let articles = repo.get_published_articles().await.unwrap_or_default();
     
     let mut items = Vec::new();
     for article in articles {
-        let url = format!("https://irshadali.org/articles/{}", article.slug);
+        let url = format!("{}/articles/{}", base_url, article.slug);
         let pub_date = article.created_at.to_rfc2822();
         
         let guid = GuidBuilder::default()
@@ -81,9 +83,9 @@ pub async fn rss_handler(Extension(conn): Extension<DatabaseConnection>) -> impl
     }
     
     let channel = ChannelBuilder::default()
-        .title("Irshad - Developer & Writer".to_string())
-        .link("https://irshadali.org".to_string())
-        .description("Thoughts on Rust, Systems Engineering, and software architecture.".to_string())
+        .title(cfg.title)
+        .link(base_url.to_string())
+        .description(cfg.tagline)
         .language(Some("en-us".to_string()))
         .items(items)
         .build();
@@ -97,13 +99,17 @@ pub async fn rss_handler(Extension(conn): Extension<DatabaseConnection>) -> impl
 pub async fn atom_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
     use database::repositories::ArticleRepository;
     
+    let cfg = config::SiteConfig::load();
+    let base_url = cfg.site_url.trim_end_matches('/');
     let repo = ArticleRepository::new(conn);
     let articles = repo.get_published_articles().await.unwrap_or_default();
     let updated = chrono::Utc::now().to_rfc3339();
+    let author_escaped = cfg.author.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+    let title_cfg_escaped = cfg.title.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     
     let mut entries = String::new();
     for a in articles {
-        let url = format!("https://irshadali.org/articles/{}", a.slug);
+        let url = format!("{}/articles/{}", base_url, a.slug);
         let title_escaped = a.title.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
         let desc_escaped = a.description.unwrap_or_default().replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
         let item_updated = a.updated_at.to_rfc3339();
@@ -115,24 +121,24 @@ pub async fn atom_handler(Extension(conn): Extension<DatabaseConnection>) -> imp
     <id>{}</id>
     <updated>{}</updated>
     <summary>{}</summary>
-    <author><name>Irshad Ali</name></author>
+    <author><name>{}</name></author>
   </entry>
 "#,
-            title_escaped, url, url, item_updated, desc_escaped
+            title_escaped, url, url, item_updated, desc_escaped, author_escaped
         ));
     }
     
     let atom = format!(
         r#"<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>Irshad - Developer &amp; Writer</title>
-  <link href="https://irshadali.org/atom.xml" rel="self" />
-  <link href="https://irshadali.org/" />
-  <id>https://irshadali.org/</id>
+  <title>{}</title>
+  <link href="{}/atom.xml" rel="self" />
+  <link href="{}/" />
+  <id>{}/</id>
   <updated>{}</updated>
-  <author><name>Irshad Ali</name></author>
+  <author><name>{}</name></author>
 {}</feed>"#,
-        updated, entries
+        title_cfg_escaped, base_url, base_url, base_url, updated, author_escaped, entries
     );
     
     axum::response::Response::builder()
@@ -164,11 +170,13 @@ struct JsonFeed {
 pub async fn feed_json_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
     use database::repositories::ArticleRepository;
     
+    let cfg = config::SiteConfig::load();
+    let base_url = cfg.site_url.trim_end_matches('/');
     let repo = ArticleRepository::new(conn);
     let articles = repo.get_published_articles().await.unwrap_or_default();
     
     let items = articles.into_iter().map(|a| {
-        let url = format!("https://irshadali.org/articles/{}", a.slug);
+        let url = format!("{}/articles/{}", base_url, a.slug);
         JsonFeedItem {
             id: url.clone(),
             url,
@@ -181,10 +189,10 @@ pub async fn feed_json_handler(Extension(conn): Extension<DatabaseConnection>) -
     
     let feed = JsonFeed {
         version: "https://jsonfeed.org/version/1.1".to_string(),
-        title: "Irshad - Developer & Writer".to_string(),
-        home_page_url: "https://irshadali.org".to_string(),
-        feed_url: "https://irshadali.org/feed.json".to_string(),
-        description: "Thoughts on Rust, Systems Engineering, and software architecture.".to_string(),
+        title: cfg.title,
+        home_page_url: base_url.to_string(),
+        feed_url: format!("{}/feed.json", base_url),
+        description: cfg.tagline,
         items,
     };
     
@@ -199,6 +207,8 @@ pub async fn feed_json_handler(Extension(conn): Extension<DatabaseConnection>) -
 pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> impl axum::response::IntoResponse {
     use database::repositories::{ArticleRepository, ProjectRepository, BookRepository};
     
+    let cfg = config::SiteConfig::load();
+    let base_url = cfg.site_url.trim_end_matches('/');
     let art_repo = ArticleRepository::new(conn.clone());
     let proj_repo = ProjectRepository::new(conn.clone());
     let book_repo = BookRepository::new(conn);
@@ -224,14 +234,15 @@ pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> 
     
     for (path, priority, freq) in static_pages {
         urls.push_str(&format!(
-            "  <url>\n    <loc>https://irshadali.org{}</loc>\n    <changefreq>{}</changefreq>\n    <priority>{}</priority>\n  </url>\n",
-            path, freq, priority
+            "  <url>\n    <loc>{}{}</loc>\n    <changefreq>{}</changefreq>\n    <priority>{}</priority>\n  </url>\n",
+            base_url, path, freq, priority
         ));
     }
     
     for a in articles {
         urls.push_str(&format!(
-            "  <url>\n    <loc>https://irshadali.org/articles/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n",
+            "  <url>\n    <loc>{}/articles/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n",
+            base_url,
             a.slug,
             a.updated_at.format("%Y-%m-%d")
         ));
@@ -239,7 +250,8 @@ pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> 
     
     for p in projects {
         urls.push_str(&format!(
-            "  <url>\n    <loc>https://irshadali.org/projects/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n",
+            "  <url>\n    <loc>{}/projects/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>\n",
+            base_url,
             p.slug,
             p.updated_at.format("%Y-%m-%d")
         ));
@@ -247,7 +259,8 @@ pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> 
     
     for b in books {
         urls.push_str(&format!(
-            "  <url>\n    <loc>https://irshadali.org/books/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n",
+            "  <url>\n    <loc>{}/books/{}</loc>\n    <lastmod>{}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n",
+            base_url,
             b.slug,
             b.updated_at.format("%Y-%m-%d")
         ));
@@ -264,8 +277,8 @@ pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> 
                         if let Ok(meta) = ron::from_str::<domain::models::BookMeta>(&ron_content) {
                             for chapter in meta.chapters {
                                 urls.push_str(&format!(
-                                    "  <url>\n    <loc>https://irshadali.org/books/{}/{}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n",
-                                    book_slug, chapter
+                                    "  <url>\n    <loc>{}/books/{}/{}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n",
+                                    base_url, book_slug, chapter
                                 ));
                             }
                         }
@@ -289,17 +302,16 @@ pub async fn sitemap_handler(Extension(conn): Extension<DatabaseConnection>) -> 
 }
 
 pub async fn robots_handler() -> impl axum::response::IntoResponse {
-    let robots = r#"User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /login
-
-Sitemap: https://irshadali.org/sitemap.xml
-"#;
+    let cfg = config::SiteConfig::load();
+    let base_url = cfg.site_url.trim_end_matches('/');
+    let robots = format!(
+        "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /login\n\nSitemap: {}/sitemap.xml\n",
+        base_url
+    );
 
     axum::response::Response::builder()
         .header("Content-Type", "text/plain; charset=utf-8")
-        .body(robots.to_string())
+        .body(robots)
         .unwrap()
 }
 
@@ -313,13 +325,17 @@ pub struct OgParams {
 pub async fn og_image_handler(
     axum::extract::Query(params): axum::extract::Query<OgParams>,
 ) -> impl axum::response::IntoResponse {
-    let title = params.title.unwrap_or_else(|| "Irshad Ali".to_string());
-    let subtitle = params.subtitle.unwrap_or_else(|| "Software Engineer & Systems Architect".to_string());
+    let cfg = config::SiteConfig::load();
+    let title = params.title.unwrap_or_else(|| cfg.author.clone());
+    let subtitle = params.subtitle.unwrap_or_else(|| cfg.role.clone());
     let tag = params.tag.unwrap_or_else(|| "Rust & Systems".to_string());
+    let host_label = cfg.site_url.trim_start_matches("https://").trim_start_matches("http://").trim_end_matches('/');
 
     let title_escaped = title.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     let subtitle_escaped = subtitle.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     let tag_escaped = tag.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+    let author_escaped = cfg.author.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+    let host_escaped = host_label.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
 
     let svg = format!(
         r##"<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
@@ -334,7 +350,7 @@ pub async fn og_image_handler(
   <rect width="1200" height="630" fill="url(#bg)" />
   <rect x="40" y="40" width="1120" height="550" rx="24" fill="none" stroke="#334155" stroke-width="2" />
   
-  <text x="90" y="120" font-family="system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" font-size="32" font-weight="bold" fill="#60a5fa">&lt;IA /&gt;</text>
+  <text x="90" y="120" font-family="system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" font-size="32" font-weight="bold" fill="#60a5fa">&lt;{} /&gt;</text>
   <rect x="900" y="88" width="210" height="42" rx="21" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
   <text x="1005" y="115" font-family="system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" font-size="15" font-weight="600" fill="#94a3b8" text-anchor="middle">{}</text>
   
@@ -347,10 +363,10 @@ pub async fn og_image_handler(
   </text>
   
   <line x1="90" y1="470" x2="1110" y2="470" stroke="#334155" stroke-width="1.5" />
-  <text x="90" y="525" font-family="system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" font-size="22" font-weight="600" fill="#64748b">irshadali.org</text>
-  <text x="1110" y="525" font-family="system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" font-size="22" font-weight="500" fill="#64748b" text-anchor="end">Irshad Ali</text>
+  <text x="90" y="525" font-family="system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" font-size="22" font-weight="600" fill="#64748b">{}</text>
+  <text x="1110" y="525" font-family="system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif" font-size="22" font-weight="500" fill="#64748b" text-anchor="end">{}</text>
 </svg>"##,
-        tag_escaped, title_escaped, subtitle_escaped
+        cfg.short_name, tag_escaped, title_escaped, subtitle_escaped, host_escaped, author_escaped
     );
 
     axum::response::Response::builder()
@@ -361,27 +377,28 @@ pub async fn og_image_handler(
 }
 
 pub async fn manifest_handler() -> impl axum::response::IntoResponse {
-    let manifest = r##"{
-  "name": "Irshad Ali - Developer & Systems Architect",
-  "short_name": "Irshad",
-  "description": "High-Performance Distributed Systems, Rust, and Cloud Architecture.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "icons": [
-    {
-      "src": "/api/og?title=IA&subtitle=Dev",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml"
-    }
-  ]
-}"##;
+    let cfg = config::SiteConfig::load();
+    let manifest = serde_json::json!({
+        "name": cfg.title,
+        "short_name": cfg.short_name,
+        "description": cfg.tagline,
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#0f172a",
+        "theme_color": "#0f172a",
+        "icons": [
+            {
+                "src": format!("/api/og?title={}&subtitle=Dev", cfg.short_name),
+                "sizes": "192x192 512x512",
+                "type": "image/svg+xml"
+            }
+        ]
+    });
 
     axum::response::Response::builder()
         .header("Content-Type", "application/manifest+json; charset=utf-8")
         .header("Cache-Control", "public, max-age=86400")
-        .body(manifest.to_string())
+        .body(serde_json::to_string_pretty(&manifest).unwrap_or_default())
         .unwrap()
 }
 
