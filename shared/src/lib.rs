@@ -59,6 +59,42 @@ impl MemoryCache {
     }
 }
 
+pub struct RateLimiter;
+
+static RATE_LIMIT_CACHE: OnceLock<Cache<String, (u32, std::time::Instant)>> = OnceLock::new();
+
+impl RateLimiter {
+    fn cache() -> &'static Cache<String, (u32, std::time::Instant)> {
+        RATE_LIMIT_CACHE.get_or_init(|| {
+            Cache::builder()
+                .time_to_live(Duration::from_secs(600))
+                .max_capacity(10_000)
+                .build()
+        })
+    }
+
+    /// Fixed-window in-memory rate limiter backed by `moka`.
+    /// Returns `true` if the request is allowed, `false` if the limit is exceeded.
+    pub fn check(key: &str, max_requests: u32, window_secs: u64) -> bool {
+        let now = std::time::Instant::now();
+        let window = Duration::from_secs(window_secs);
+        let cache = Self::cache();
+
+        if let Some((count, window_start)) = cache.get(key) {
+            if now.duration_since(window_start) < window {
+                if count >= max_requests {
+                    return false;
+                }
+                cache.insert(key.to_string(), (count + 1, window_start));
+                return true;
+            }
+        }
+
+        cache.insert(key.to_string(), (1, now));
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,5 +118,13 @@ mod tests {
         MemoryCache::insert_postcard("test_bench_item".to_string(), &item);
         let retrieved: Option<BenchmarkPayload> = MemoryCache::get_postcard("test_bench_item");
         assert_eq!(retrieved, Some(item));
+    }
+
+    #[test]
+    fn test_rate_limiter() {
+        let key = "test_rl_user_1";
+        assert!(RateLimiter::check(key, 2, 60));
+        assert!(RateLimiter::check(key, 2, 60));
+        assert!(!RateLimiter::check(key, 2, 60));
     }
 }
