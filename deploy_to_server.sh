@@ -10,18 +10,20 @@ ENV_FILE="${SCRIPT_DIR}/.env"
 
 if [ -f "$ENV_FILE" ]; then
     # Load variables from .env
-    eval "$(grep -v '^#' "$ENV_FILE" | grep -E '^(IP_ADDRESSE|KEY|USER)=' | sed 's/ *= */=/g')"
+    eval "$(grep -v '^#' "$ENV_FILE" | grep -E '^(IP_ADDRESSE|KEY|USER|DOMAIN)=' | sed 's/ *= */=/g')"
 fi
 
+DOMAIN="${DOMAIN:-irshadali.org}"
 SERVER_IP="${IP_ADDRESSE:-20.198.120.162}"
 SSH_KEY="${KEY:-$HOME/secure/queos-server_key.pem}"
 SSH_USER="${USER:-irshad}"
+REMOTE_DIR="~/deploy_${DOMAIN//./_}"
 
 # Expand tilde in key path if needed
 SSH_KEY="${SSH_KEY/#\~/$HOME}"
 
 echo "=================================================="
-echo " Deploying irshadali.org to Remote Server"
+echo " Deploying ${DOMAIN} to Remote Server"
 echo " Host: ${SSH_USER}@${SERVER_IP}"
 echo " Key:  ${SSH_KEY}"
 echo "=================================================="
@@ -41,11 +43,11 @@ if ! ssh ${SSH_OPTS} "${SSH_USER}@${SERVER_IP}" "echo '[+] SSH Connection establ
 fi
 
 echo "[2/4] Packaging and uploading build bundle..."
-ssh ${SSH_OPTS} "${SSH_USER}@${SERVER_IP}" "mkdir -p ~/deploy_irshadali"
-tar -czf - -C "${SCRIPT_DIR}/deploy" . | ssh ${SSH_OPTS} "${SSH_USER}@${SERVER_IP}" "tar -xzf - -C ~/deploy_irshadali"
+ssh ${SSH_OPTS} "${SSH_USER}@${SERVER_IP}" "mkdir -p ${REMOTE_DIR}"
+tar -czf - -C "${SCRIPT_DIR}/deploy" . | ssh ${SSH_OPTS} "${SSH_USER}@${SERVER_IP}" "tar -xzf - -C ${REMOTE_DIR}"
 
 echo "[3/4] Running remote server setup..."
-ssh ${SSH_OPTS} -t "${SSH_USER}@${SERVER_IP}" "cd ~/deploy_irshadali && chmod +x setup.sh && sudo ./setup.sh"
+ssh ${SSH_OPTS} -t "${SSH_USER}@${SERVER_IP}" "cd ${REMOTE_DIR} && chmod +x setup.sh && sudo DOMAIN='${DOMAIN}' ./setup.sh"
 
 echo "[4/4] Verifying deployment..."
 ssh ${SSH_OPTS} "${SSH_USER}@${SERVER_IP}" "curl -sI http://127.0.0.1:3000/ || true"
